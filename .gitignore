@@ -42,6 +42,10 @@ pids/
 *.seed
 *.pid.lock
 
+# Generated RAG API responses may echo request metadata or credentials.
+# Regenerate them locally from environment variables; never commit JSON output.
+rag_data/*.json
+
 # Coverage directory used by tools like istanbul
 coverage/
 

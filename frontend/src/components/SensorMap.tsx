@@ -96,8 +96,6 @@ const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, onSensorSel
   if (loading) return <div>Loading sensors...</div>;
   if (error) return <div style={{ color: 'red' }}>Error: {error}</div>;
 
-  console.log('PurpleAir API KEY:', process.env.REACT_APP_PURPLEAIR_API_KEY);
-
   return (
     <div className="sensor-map">
       <h2>Sensor Map</h2>
@@ -135,4 +133,4 @@ const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, onSensorSel
   );
 };
 
-export default SensorMap; 
+export default SensorMap;

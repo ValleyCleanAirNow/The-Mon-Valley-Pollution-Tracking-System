@@ -11,9 +11,43 @@ env:
   NODE_VERSION_BACKEND: '22'
 
 jobs:
+  secret-scan:
+    name: Full-history secret scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - name: Checkout complete history
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Install checksum-verified gitleaks
+      env:
+        GITLEAKS_VERSION: 8.28.0
+        GITLEAKS_SHA256: a65b5253807a68ac0cafa4414031fd740aeb55f54fb7e55f386acb52e6a840eb
+      run: |
+        curl --fail --silent --show-error --location \
+          "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+          --output /tmp/gitleaks.tar.gz
+        echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum --check --strict
+        tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+        sudo install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
+        gitleaks version
+
+    - name: Fail on current-tree findings
+      run: gitleaks dir --redact=100 --verbose .
+
+    - name: Fail on full-history findings
+      shell: bash
+      run: |
+        set -o pipefail
+        git log -p -U0 --full-history --all | gitleaks stdin --redact=100 --verbose
+
   # Frontend Tests and Build
   frontend:
     runs-on: ubuntu-latest
+    needs: [secret-scan]
     defaults:
       run:
         working-directory: ./frontend
@@ -52,6 +86,7 @@ jobs:
   # Backend Tests and Build
   backend:
     runs-on: ubuntu-latest
+    needs: [secret-scan]
     defaults:
       run:
         working-directory: ./functions
@@ -215,4 +250,4 @@ jobs:
         npm install -g @lhci/cli@0.12.x
         lhci autorun --upload.target=temporary-public-storage || echo "Lighthouse CI failed"
       working-directory: ./frontend
-      continue-on-error: true 
+      continue-on-error: true
