@@ -141,6 +141,22 @@ The end-to-end test seeds sensors, files anonymous reports under the real
 rules, checks the aggregation trigger, and drives the built app in headless
 Chromium. See `e2e/README.md` and OPERATIONS.md.
 
+## Go live (first time)
+
+On a machine where `firebase login` (and optionally `gcloud auth login`)
+has been run:
+
+```bash
+cp frontend/.env.example frontend/.env   # fill in the Firebase web config
+scripts/go-live.sh --delete-legacy
+```
+
+The script enables Anonymous sign-in, prompts for each secret that is not
+already set, builds, deploys rules, indexes, storage, functions and hosting,
+and optionally exports and deletes the legacy `symptomReports` collection.
+After the first poll, `node scripts/status.js` prints poll health, sensor
+counts, and the seeded centroids for review.
+
 ## Deployment
 
 ```bash
