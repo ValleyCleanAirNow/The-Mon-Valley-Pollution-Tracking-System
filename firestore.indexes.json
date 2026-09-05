@@ -1,19 +1,31 @@
 {
   "indexes": [
     {
-      "collectionGroup": "symptomReports",
+      "collectionGroup": "reports",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "DESCENDING" }
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
-      "collectionGroup": "healthAssessments",
+      "collectionGroup": "reports",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "DESCENDING" }
+        {
+          "fieldPath": "municipality",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "hour_bucket",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],
@@ -23,8 +35,14 @@
       "fieldPath": "expires_at",
       "ttl": true,
       "indexes": [
-        { "order": "ASCENDING", "queryScope": "COLLECTION" },
-        { "order": "DESCENDING", "queryScope": "COLLECTION" }
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
+        }
       ]
     }
   ]

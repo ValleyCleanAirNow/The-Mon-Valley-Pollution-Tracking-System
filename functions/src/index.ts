@@ -3,6 +3,8 @@
  *
  * - pollPurpleAir: scheduled PurpleAir poller (every 10 minutes) that applies
  *   the EPA correction and AQI and writes to Firestore. See src/purpleair/.
+ * - aggregateReports: Firestore trigger that maintains hourly per-municipality
+ *   aggregates of community reports with small-count suppression.
  * - llama3Chat: BreatheAI chat proxy (Together AI, key via defineSecret)
  * - healthCheck, getMetrics: status endpoints used by the BreatheAI UI
  * - processSensorData, submitSymptomReport: legacy stubs kept for
@@ -20,6 +22,7 @@ import axios from 'axios';
 admin.initializeApp();
 
 export { pollPurpleAir } from './purpleair/poll';
+export { aggregateReports } from './reports/aggregate';
 
 // CORS handler
 const corsHandler = cors({ origin: true });

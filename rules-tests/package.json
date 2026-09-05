@@ -1,0 +1,14 @@
+{
+  "name": "rules-tests",
+  "private": true,
+  "description": "Firestore security rules tests. Run with the Local Emulator Suite: npm test",
+  "scripts": {
+    "test": "firebase --config ../firebase.json emulators:exec --only firestore --project demo-mvpts \"jest --runInBand\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.0.0",
+    "firebase-tools": "^13.35.1",
+    "jest": "^29.7.0"
+  }
+}
