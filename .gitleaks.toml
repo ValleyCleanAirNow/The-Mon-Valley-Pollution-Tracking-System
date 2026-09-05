@@ -1,0 +1,12 @@
+title = "VCAN TRACKER secret scanning"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "epa-aqs-query-credential"
+description = "EPA AQS credential embedded in a generated response URL"
+regex = '''(?i)[?&](?:email|key)=([^&\s"']+)'''
+secretGroup = 1
+path = '''rag_data/.*\.json'''
+keywords = ["email=", "key="]

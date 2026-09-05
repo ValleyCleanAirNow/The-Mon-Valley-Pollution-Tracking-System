@@ -10,6 +10,8 @@
 
 import * as admin from "firebase-admin";
 import * as functions from 'firebase-functions';
+import { defineSecret } from 'firebase-functions/params';
+import { onRequest } from 'firebase-functions/v2/https';
 import cors from 'cors';
 import axios from 'axios';
 
@@ -18,6 +20,7 @@ admin.initializeApp();
 
 // CORS handler
 const corsHandler = cors({ origin: true });
+const togetherKey = defineSecret('TOGETHER_API_KEY');
 
 // Custom knowledge base for Mon Valley air quality data
 const MON_VALLEY_KNOWLEDGE = {
@@ -79,112 +82,8 @@ function retrieveRelevantData(query: string) {
   return relevant_data;
 }
 
-// Test function for Together AI
-export const testTogetherAI = functions.https.onRequest((request, response) => {
-  corsHandler(request, response, async () => {
-    try {
-      console.log('=== TEST FUNCTION STARTED ===');
-      
-                        const apiKey = "REMOVED_TOGETHER_AI";
-      console.log('API Key available:', !!apiKey);
-      console.log('API Key length:', (apiKey || '').length);
-      
-      if (!apiKey) {
-        response.json({ error: 'No API key configured' });
-        return;
-      }
-
-      // Test Together AI directly
-      const testResponse = await axios.post('https://api.together.xyz/v1/chat/completions', {
-        model: 'meta-llama/Meta-Llama-3-8B-Instruct-Lite',
-        messages: [
-          {
-            role: 'user',
-            content: 'Hello, are you working?'
-          }
-        ],
-        max_tokens: 100
-      }, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
-      });
-
-      console.log('Together AI response:', testResponse.data);
-      
-      response.json({
-        success: true,
-        response: testResponse.data.choices[0]?.message?.content,
-        model: testResponse.data.model
-      });
-
-    } catch (error: any) {
-      console.error('Test function error:', error.message);
-      response.json({
-        success: false,
-        error: error.message,
-        response: error.response?.data
-      });
-    }
-  });
-});
-
-// New test function to avoid caching issues
-export const testTogetherAINew = functions.https.onRequest((request, response) => {
-  corsHandler(request, response, async () => {
-    try {
-      console.log('=== NEW TEST FUNCTION STARTED ===');
-      
-      const apiKey = "REMOVED_TOGETHER_AI";
-      console.log('API Key available:', !!apiKey);
-      console.log('API Key length:', (apiKey || '').length);
-      
-      if (!apiKey) {
-        response.json({ error: 'No API key configured' });
-        return;
-      }
-
-      // Test Together AI directly
-      const testResponse = await axios.post('https://api.together.xyz/v1/chat/completions', {
-        model: 'meta-llama/Meta-Llama-3-8B-Instruct-Lite',
-        messages: [
-          {
-            role: 'user',
-            content: 'Hello, are you working?'
-          }
-        ],
-        max_tokens: 100
-      }, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
-      });
-
-      console.log('Together AI response:', testResponse.data);
-      
-      response.json({
-        success: true,
-        response: testResponse.data.choices[0]?.message?.content,
-        model: testResponse.data.model
-      });
-
-    } catch (error: any) {
-      console.error('New test function error:', error.message);
-      response.json({
-        success: false,
-        error: error.message,
-        response: error.response?.data
-      });
-    }
-  });
-});
-
 // Proxy function for AI chat
-export const llama3Chat = functions.https.onRequest((request, response) => {
+export const llama3Chat = onRequest({ secrets: [togetherKey] }, (request, response) => {
   corsHandler(request, response, async () => {
     try {
       console.log('=== FUNCTION STARTED ===');
@@ -202,10 +101,7 @@ export const llama3Chat = functions.https.onRequest((request, response) => {
                         console.log('Message received:', message);
       
                         // Test API key access
-                  const apiKey = "REMOVED_TOGETHER_AI";
-                  console.log('API Key available:', !!apiKey);
-                  console.log('API Key length:', (apiKey || '').length);
-                  console.log('API Key prefix:', (apiKey || '').substring(0, 10) + '...');
+      const apiKey = togetherKey.value();
                   
                   if (!apiKey) {
                     console.log('No API key found in environment variables, using fallback');

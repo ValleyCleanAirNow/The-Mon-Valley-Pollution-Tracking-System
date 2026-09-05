@@ -36,6 +36,25 @@ This directory contains scripts and instructions for gathering, preprocessing, a
 
 ## **Quickstart: Run All Ingestion Scripts**
 
+Generated JSON responses under `rag_data/` are intentionally ignored because
+upstream APIs may echo request metadata. Keep credentials in the shell
+environment and never paste them into scripts, commands committed to Git, or
+generated response files.
+
+For the current EPA AQS ingester, set the two required values only in your
+local environment and run the script from this directory:
+
+```sh
+export AQS_EMAIL="your-registered-aqs-email"
+export AQS_KEY="your-rotated-aqs-key"
+python3 ingest_epa_aqs.py
+```
+
+After generation, verify that `../rag_data/epa_aqs.json` is ignored and that no
+response `Header` containing a request URL is staged. Phase 1 replaces this
+example ingester with the production scheduled pipeline and Firebase Secret
+Manager bindings.
+
 ```sh
 cd rag_ingest
 python3 ingest_epa.py

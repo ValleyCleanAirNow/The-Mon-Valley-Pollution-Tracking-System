@@ -11,9 +11,26 @@ env:
   NODE_VERSION_BACKEND: '22'
 
 jobs:
+  secret-scan:
+    name: Full-history secret scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - name: Checkout complete history
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Fail on any gitleaks finding
+      uses: docker://ghcr.io/gitleaks/gitleaks:v8.28.0
+      with:
+        args: git --redact=100 --verbose /github/workspace
+
   # Frontend Tests and Build
   frontend:
     runs-on: ubuntu-latest
+    needs: [secret-scan]
     defaults:
       run:
         working-directory: ./frontend
@@ -52,6 +69,7 @@ jobs:
   # Backend Tests and Build
   backend:
     runs-on: ubuntu-latest
+    needs: [secret-scan]
     defaults:
       run:
         working-directory: ./functions
@@ -215,4 +233,4 @@ jobs:
         npm install -g @lhci/cli@0.12.x
         lhci autorun --upload.target=temporary-public-storage || echo "Lighthouse CI failed"
       working-directory: ./frontend
-      continue-on-error: true 
+      continue-on-error: true
