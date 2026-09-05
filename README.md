@@ -18,6 +18,10 @@ Contact: Qiyam Ansari, Executive Director, VCAN, qiyam@valleycleanair.com
   Cause form. Reports are pseudonymous (Firebase Anonymous Auth), readable
   only by their author, and published only as hourly per-municipality
   aggregates once three or more people report in the same hour.
+- **Threshold alerts.** Residents pick municipalities, a level (Unhealthy for
+  Sensitive Groups, or Unhealthy), and channels (device notification, email,
+  optional SMS). Alerts fire after two consecutive polls at or above the level
+  and again when it clears; the same level is not repeated within 3 hours.
 - **BreatheAI.** Chat assistant for air quality and health questions.
 
 ## Architecture
@@ -34,10 +38,13 @@ Third-party APIs (PurpleAir, Together AI) are called only from Cloud
 Functions. The browser never holds an API key; it reads Firestore.
 
 ```
-PurpleAir API ──(every 10 min)──> pollPurpleAir ──> Firestore sensors/{id}
-                                                        └── readings/{ts}  (30 day TTL)
-                                                              │
-Browser <──── onSnapshot ───────────────────────────────────┘
+PurpleAir API ──(every 10 min)──> pollPurpleAir ──> sensors/{id}, readings/{ts}, meta/purpleair_poll
+                                                                                        │
+                                                          onPollComplete <──────────────┘
+                                                             ├─> municipality_status/{m}
+                                                             └─> alert_subscriptions ─> FCM / SendGrid / Twilio ─> alert_log
+Browser <── onSnapshot ── sensors, aggregates, municipality_status
+Browser ── Anonymous Auth ──> reports (author-only) ──> aggregateReports ──> aggregates
 ```
 
 ## Setup
@@ -73,7 +80,17 @@ Secrets are never committed. Set each one once per project:
 ```bash
 firebase functions:secrets:set PURPLEAIR_API_KEY   # read key from develop.purpleair.com
 firebase functions:secrets:set TOGETHER_API_KEY    # BreatheAI chat
+firebase functions:secrets:set SENDGRID_API_KEY    # alert emails
+firebase functions:secrets:set TWILIO_ACCOUNT_SID  # alert SMS (set to "unused" if not using SMS)
+firebase functions:secrets:set TWILIO_AUTH_TOKEN
+firebase functions:secrets:set TWILIO_FROM_NUMBER
 ```
+
+Non-secret alert parameters (`ALERT_FROM_EMAIL`, `APP_URL`,
+`SMS_ALERTS_ENABLED`, `ALERT_DRY_RUN`) have defaults in code and can be
+overridden in `functions/.env`. For device notifications, create a Web Push
+key pair in the Firebase console (Project settings, Cloud Messaging) and put
+it in `REACT_APP_FIREBASE_VAPID_KEY`.
 
 `functions/.env.example` lists every secret the functions expect.
 
@@ -253,6 +270,75 @@ This is what the map and dashboard use.
 | `mean_symptom_severity`, `mean_odor_intensity` | number or null | Means to one decimal. |
 | `updated_at` | Timestamp | Last recompute. |
 
+### `municipality_status/{municipality}`
+
+Recomputed by `onPollComplete` after every successful poll. Public read.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `municipality` | string | Name. |
+| `centroid` | map | `{lat, lng}` from `config/municipalities`. |
+| `radius_km` | number | Sensor search radius (default 2). |
+| `pm25_corrected` | number or null | Mean corrected PM2.5 of non-excluded sensors within the radius. |
+| `aqi`, `aqi_category` | number, string, or null | Derived from the mean. |
+| `sensor_count`, `sensor_ids` | number, string[] | Sensors that contributed. |
+| `computed_at` | Timestamp | Poll time. |
+| `history` | array | Last 6 polls of `{at, pm25_corrected, aqi_category}`, oldest first. Drives the two-consecutive-polls rule. |
+
+### `config/municipalities`
+
+Seeded from `functions/src/alerts/config.ts` on first run. Edit in the
+console; no deploy needed. Public read.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `centroids` | map | Municipality name to `{lat, lng}`. |
+| `radius_km` | number | Radius for sensor averaging. |
+
+### `alert_subscriptions/{uid}`
+
+One per device, keyed by Anonymous Auth uid. Owner or admin only. Never
+joined with `reports`.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `municipalities` | string[] | 1 to 16 names from the municipality list. |
+| `threshold` | string | `usg` or `unhealthy`. |
+| `channels` | string[] | Any of `push`, `email`, `sms`. |
+| `contact.email` | string | Present when `email` is a channel. |
+| `contact.phone` | string | E.164, present when `sms` is a channel. |
+| `contact.fcm_tokens` | string[] | Up to 10 web push tokens; dead tokens are pruned automatically. |
+| `quiet_hours` | map or null | `{start, end}` as `HH:mm` Eastern; may wrap midnight. |
+| `created_at`, `updated_at` | Timestamp | Server time. |
+
+### `alert_state/{uid}_{municipality}`
+
+Server-only. Tracks whether an alert is active for a subscriber so the
+engine can send "improving" messages and honour the 3 hour re-send gap.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `active` | boolean | An alert has been sent and the air has not yet cleared. |
+| `last_level` | string or null | Category last announced. |
+| `last_sent_at`, `updated_at` | Timestamp | Timing. |
+
+### `alert_log/{autoId}`
+
+One entry per channel per send. Admin read only.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `uid`, `municipality` | string | Who and where. |
+| `channel` | string | `push`, `email`, `sms`. |
+| `kind` | string | `alert` or `improving`. |
+| `level` | string | AQI category announced. |
+| `pm25_corrected` | number or null | Value quoted in the message. |
+| `timestamp` | Timestamp | Poll time that triggered it. |
+| `status` | string | `sent` or `failed`. |
+| `provider_message_id` | string or null | SendGrid, Twilio, or FCM id; `dry-run` in tests. |
+| `recipient_count` | number | Tokens or addresses targeted. |
+| `error` | string or null | Provider error when failed. |
+
 ### Legacy collections
 
 `symptomReports`, `users`, `healthAssessments` predate Stage 1. Nothing
@@ -283,9 +369,10 @@ rag_ingest/          Offline scripts that build the BreatheAI knowledge base
 
 ## Status
 
-Stage 1 work items 1 (server-side PurpleAir polling), 2 (community reports
-and aggregates), and 4 (cleanup and handoff) are complete. Work item 3,
-threshold alerts, is deferred; nothing in the system sends notifications.
+All four Stage 1 work items are implemented: server-side PurpleAir
+polling, community reports with aggregates, threshold alerts, and cleanup
+and handoff. Alerts send nothing until the provider secrets are set and at
+least one resident subscribes.
 
 ## License
 

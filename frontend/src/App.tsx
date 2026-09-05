@@ -4,8 +4,9 @@ import SensorMap from './components/SensorMap';
 import SymptomReportForm from './components/SymptomReportForm';
 import Dashboard from './components/Dashboard';
 import BreatheAI from './components/BreatheAI';
+import AlertsView from './components/AlertsView';
 
-type View = 'dashboard' | 'map' | 'symptoms' | 'ai';
+type View = 'dashboard' | 'map' | 'symptoms' | 'alerts' | 'ai';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
@@ -18,6 +19,8 @@ function App() {
         return <SensorMap onSensorSelect={() => {}} />;
       case 'symptoms':
         return <SymptomReportForm />;
+      case 'alerts':
+        return <AlertsView />;
       case 'ai':
         return <BreatheAI />;
       default:
@@ -52,6 +55,13 @@ function App() {
             aria-current={currentView === 'symptoms' ? 'page' : undefined}
           >
             📝 Report Symptoms
+          </button>
+          <button
+            className={`nav-button ${currentView === 'alerts' ? 'active' : ''}`}
+            onClick={() => setCurrentView('alerts')}
+            aria-current={currentView === 'alerts' ? 'page' : undefined}
+          >
+            🔔 Alerts
           </button>
           <button
             className={`nav-button ${currentView === 'ai' ? 'active' : ''}`}

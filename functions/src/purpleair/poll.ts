@@ -101,6 +101,7 @@ export async function runPoll(db: admin.firestore.Firestore, apiKey: string, now
     await db.collection(COLLECTIONS.meta).doc(POLL_STATUS_DOC).set(
       {
         last_run_at: now,
+        ok: summary.ok,
         last_success_at: summary.ok ? now : admin.firestore.FieldValue.delete(),
         ...(summary.ok ? {} : { last_error: summary.error, last_error_at: now }),
         fetched: summary.fetched,

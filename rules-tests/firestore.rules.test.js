@@ -153,3 +153,74 @@ describe('legacy symptomReports', () => {
     await assertFails(setDoc(doc(env.authenticatedContext('u').firestore(), 'symptomReports/y'), { userId: 'u' }));
   });
 });
+
+describe('alerts', () => {
+  function validSub(over = {}) {
+    return {
+      municipalities: ['Clairton', 'Glassport'],
+      threshold: 'usg',
+      channels: ['email'],
+      contact: { email: 'someone@example.org' },
+      quiet_hours: { start: '22:00', end: '07:00' },
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+      ...over,
+    };
+  }
+
+  test('a device can create, read, update and delete its own subscription', async () => {
+    const db = env.authenticatedContext('dev-a').firestore();
+    await assertSucceeds(setDoc(doc(db, 'alert_subscriptions/dev-a'), validSub()));
+    await assertSucceeds(getDoc(doc(db, 'alert_subscriptions/dev-a')));
+    await assertSucceeds(updateDoc(doc(db, 'alert_subscriptions/dev-a'), { threshold: 'unhealthy', updated_at: serverTimestamp() }));
+    await assertFails(updateDoc(doc(db, 'alert_subscriptions/dev-a'), { threshold: 'unhealthy' })); // stale updated_at
+    await assertSucceeds(deleteDoc(doc(db, 'alert_subscriptions/dev-a')));
+  });
+
+  test('cannot touch another device\'s subscription; admin can read', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'alert_subscriptions/dev-a'), validSub({ created_at: Timestamp.now(), updated_at: Timestamp.now() }));
+    });
+    const other = env.authenticatedContext('dev-b').firestore();
+    await assertFails(getDoc(doc(other, 'alert_subscriptions/dev-a')));
+    await assertFails(setDoc(doc(other, 'alert_subscriptions/dev-a'), validSub()));
+    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'alert_subscriptions/dev-a')));
+    await assertSucceeds(getDoc(doc(env.authenticatedContext('admin', { admin: true }).firestore(), 'alert_subscriptions/dev-a')));
+  });
+
+  test('validates municipalities, threshold, channels, contact, quiet hours', async () => {
+    const db = env.authenticatedContext('dev-a').firestore();
+    const ref = doc(db, 'alert_subscriptions/dev-a');
+    await assertFails(setDoc(ref, validSub({ municipalities: ['Pittsburgh'] })));
+    await assertFails(setDoc(ref, validSub({ municipalities: [] })));
+    await assertFails(setDoc(ref, validSub({ threshold: 'good' })));
+    await assertFails(setDoc(ref, validSub({ channels: ['carrier_pigeon'] })));
+    await assertFails(setDoc(ref, validSub({ contact: { email: 'not-an-email' } })));
+    await assertFails(setDoc(ref, validSub({ contact: { phone: '412-555-0100' } })));
+    await assertSucceeds(setDoc(ref, validSub({ contact: { phone: '+14125550100', fcm_tokens: ['tok'] } })));
+    await assertFails(setDoc(ref, validSub({ contact: { name: 'Pat', email: 'p@example.org' } })));
+    await assertFails(setDoc(ref, validSub({ quiet_hours: { start: '10pm', end: '7am' } })));
+    await assertFails(setDoc(ref, validSub({ report_id: 'abc' })));
+  });
+
+  test('status and config are public read; log and state are locked down', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'municipality_status/Clairton'), { aqi: 50 });
+      await setDoc(doc(db, 'config/municipalities'), { radius_km: 2 });
+      await setDoc(doc(db, 'alert_log/e1'), { uid: 'dev-a' });
+      await setDoc(doc(db, 'alert_state/dev-a_Clairton'), { active: true });
+    });
+    const anon = env.unauthenticatedContext().firestore();
+    await assertSucceeds(getDoc(doc(anon, 'municipality_status/Clairton')));
+    await assertSucceeds(getDoc(doc(anon, 'config/municipalities')));
+    await assertFails(setDoc(doc(anon, 'municipality_status/Clairton'), { aqi: 1 }));
+    const own = env.authenticatedContext('dev-a').firestore();
+    await assertFails(getDoc(doc(own, 'alert_log/e1')));
+    await assertFails(getDoc(doc(own, 'alert_state/dev-a_Clairton')));
+    const admin = env.authenticatedContext('admin', { admin: true }).firestore();
+    await assertSucceeds(getDoc(doc(admin, 'alert_log/e1')));
+    await assertFails(setDoc(doc(admin, 'alert_log/e2'), { uid: 'x' }));
+    await assertFails(getDoc(doc(admin, 'alert_state/dev-a_Clairton')));
+  });
+});

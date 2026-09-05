@@ -58,7 +58,7 @@ async function seedSensors(db) {
   ];
   const results = rows.map((r) => transformRow(r, now)).filter(Boolean);
   await writeSensors(db, results, now);
-  await db.collection('meta').doc('purpleair_poll').set({ last_run_at: now, last_success_at: now, fetched: rows.length, included: 3, excluded: 2 });
+  await db.collection('meta').doc('purpleair_poll').set({ last_run_at: now, ok: true, last_success_at: now, fetched: rows.length, included: 3, excluded: 2 });
   const cats = results.map((r) => `${r.sensor.name}: ${r.sensor.pm25_corrected} -> ${r.sensor.aqi_category}${r.sensor.excluded ? ' (excluded: ' + r.sensor.exclude_reason + ')' : ''}`);
   log('seeded sensors:\n  ' + cats.join('\n  '));
   assert.strictEqual(results.filter((r) => !r.sensor.excluded).length, 3);
@@ -128,6 +128,69 @@ async function fileReportsAndCheckAggregates(adminDb) {
   return { bucket };
 }
 
+async function checkAlerts(adminDb) {
+  // Subscribe a test device to Glassport (seeded USG) and Clairton (seeded Good).
+  const app = initializeApp({ apiKey: 'demo', projectId: PROJECT, authDomain: `${PROJECT}.firebaseapp.com` }, 'alerts');
+  const auth = getAuth(app);
+  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+  const db = getFirestore(app);
+  connectFirestoreEmulator(db, '127.0.0.1', 8080);
+  const cred = await signInAnonymously(auth);
+  const uid = cred.user.uid;
+  const { setDoc } = require('firebase/firestore');
+  await setDoc(doc(db, 'alert_subscriptions', uid), {
+    municipalities: ['Glassport', 'Clairton'],
+    threshold: 'usg',
+    channels: ['email', 'sms'],
+    contact: { email: 'resident@example.test', phone: '+14125550100' },
+    quiet_hours: null,
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+  log('alert subscription saved for', uid.slice(0, 8) + '…');
+
+  // First poll completion already happened in seedSensors (history length 1).
+  const status1 = await waitFor(async () => {
+    const s = await adminDb.collection('municipality_status').doc('Glassport').get();
+    return s.exists ? s.data() : null;
+  }, { label: 'municipality_status/Glassport' });
+  assert.strictEqual(status1.aqi_category, 'Unhealthy for Sensitive Groups');
+  assert.strictEqual(status1.sensor_count, 1);
+  log('municipality_status: Glassport', status1.aqi_category, 'PM2.5', status1.pm25_corrected, '| Clairton', (await adminDb.collection('municipality_status').doc('Clairton').get()).data().aqi_category);
+  let logs = await adminDb.collection('alert_log').get();
+  assert.strictEqual(logs.size, 0, 'no alert after a single poll');
+
+  // Second poll completion 10 minutes later: two consecutive USG polls -> alert.
+  const later = new Date(Date.now() + 10 * 60 * 1000);
+  await adminDb.collection('meta').doc('purpleair_poll').set({ last_run_at: later, ok: true, last_success_at: later, fetched: 5, included: 3, excluded: 2 });
+  logs = await waitFor(async () => {
+    const snap = await adminDb.collection('alert_log').get();
+    return snap.size >= 2 ? snap : null;
+  }, { label: 'alert_log entries after second poll' });
+  const entries = logs.docs.map((d) => d.data());
+  const channels = entries.map((e) => e.channel).sort();
+  assert.deepStrictEqual(channels, ['email', 'sms']);
+  for (const e of entries) {
+    assert.strictEqual(e.uid, uid);
+    assert.strictEqual(e.municipality, 'Glassport');
+    assert.strictEqual(e.kind, 'alert');
+    assert.strictEqual(e.level, 'Unhealthy for Sensitive Groups');
+    assert.strictEqual(e.status, 'sent');
+    assert.strictEqual(e.provider_message_id, 'dry-run');
+  }
+  const state = await adminDb.collection('alert_state').doc(`${uid}_Glassport`).get();
+  assert.strictEqual(state.data().active, true);
+  log('alert sent (dry run) on email + sms for Glassport after two consecutive USG polls; Clairton stayed quiet');
+
+  // Third poll: same level again within 3 hours -> no new log entries.
+  const third = new Date(Date.now() + 20 * 60 * 1000);
+  await adminDb.collection('meta').doc('purpleair_poll').set({ last_run_at: third, ok: true, last_success_at: third, fetched: 5, included: 3, excluded: 2 });
+  await sleep(4000);
+  assert.strictEqual((await adminDb.collection('alert_log').get()).size, 2, 'same level must not be re-sent within 3 hours');
+  log('no duplicate alert on third poll (3 hour re-send gap)');
+  await adminDb.collection('alert_subscriptions').doc(uid).delete();
+}
+
 function serveBuild(dir, port) {
   const types = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.ico': 'image/x-icon', '.svg': 'image/svg+xml', '.map': 'application/json' };
   const server = http.createServer((req, res) => {
@@ -191,6 +254,17 @@ async function driveBrowser() {
     log('report submitted from the browser; history shows it');
     await page.screenshot({ path: path.join(shots, '4-report-success.png'), fullPage: true });
 
+    await page.getByRole('button', { name: /Alerts/ }).click();
+    await page.getByText('Air quality alerts').waitFor();
+    await page.getByRole('button', { name: 'Glassport' }).click();
+    await page.getByLabel('Current air quality').getByText(/Unhealthy for Sensitive Groups/).waitFor({ timeout: 15000 });
+    await page.getByRole('button', { name: 'Email' }).click();
+    await page.getByLabel('Email address').fill('resident@example.test');
+    await page.getByRole('button', { name: 'Turn on alerts' }).click();
+    await page.getByText(/Alerts saved/).waitFor({ timeout: 15000 });
+    log('alert subscription saved from the browser; status badge shows Glassport USG');
+    await page.screenshot({ path: path.join(shots, '5-alerts.png'), fullPage: true });
+
     const realErrors = errors.filter((e) => !/favicon|manifest|tile.openstreetmap|net::ERR/i.test(e));
     if (realErrors.length) log('browser console errors:', realErrors);
     assert.strictEqual(realErrors.length, 0, 'no browser errors');
@@ -205,6 +279,7 @@ async function driveBrowser() {
   const adminDb = admin.firestore();
   await seedSensors(adminDb);
   await fileReportsAndCheckAggregates(adminDb);
+  await checkAlerts(adminDb);
   await driveBrowser();
   log('ALL CHECKS PASSED');
   process.exit(0);

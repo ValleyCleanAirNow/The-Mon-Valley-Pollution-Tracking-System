@@ -28,6 +28,39 @@ service cloud.firestore {
       return v is list && v.size() <= max;
     }
 
+    function isHHmm(v) {
+      return v is string && v.size() == 5 && v.matches('[0-2][0-9]:[0-5][0-9]');
+    }
+
+    function isQuietHoursOrNull(q) {
+      return q == null || (q is map && q.keys().hasOnly(['start', 'end']) && isHHmm(q.start) && isHHmm(q.end));
+    }
+
+    function isContact(c) {
+      return c is map && c.keys().hasOnly(['email', 'phone', 'fcm_tokens']) &&
+        (!('email' in c) || c.email == null || (c.email is string && c.email.size() <= 254 && c.email.matches('.+@.+\\..+'))) &&
+        (!('phone' in c) || c.phone == null || (c.phone is string && c.phone.matches('\\+[1-9][0-9]{7,14}'))) &&
+        (!('fcm_tokens' in c) || (c.fcm_tokens is list && c.fcm_tokens.size() <= 10));
+    }
+
+    // Alert subscription: which municipalities, at what level, over which
+    // channels. Owner-only. Never contains anything from `reports`.
+    function isValidSubscription(s) {
+      return s.keys().hasOnly(['municipalities', 'threshold', 'channels', 'contact', 'quiet_hours', 'created_at', 'updated_at']) &&
+        s.municipalities is list && s.municipalities.size() >= 1 && s.municipalities.size() <= 16 &&
+        s.municipalities.hasOnly([
+          'Clairton', 'Glassport', 'Liberty', 'Lincoln', 'Port Vue', 'McKeesport',
+          'Elizabeth Township', 'Elizabeth Borough', 'Jefferson Hills', 'West Mifflin',
+          'Dravosburg', 'Duquesne', 'Braddock', 'North Braddock', 'Rankin', 'East Pittsburgh'
+        ]) &&
+        s.threshold in ['usg', 'unhealthy'] &&
+        s.channels is list && s.channels.size() >= 1 && s.channels.hasOnly(['push', 'email', 'sms']) &&
+        isContact(s.contact) &&
+        isQuietHoursOrNull(s.quiet_hours) &&
+        s.created_at is timestamp &&
+        s.updated_at == request.time;
+    }
+
     function isLocationOrNull(loc) {
       return loc == null || (
         loc is map && loc.keys().hasOnly(['lat', 'lng']) &&
@@ -93,6 +126,41 @@ service cloud.firestore {
     match /aggregates/{aggregateId} {
       allow read: if true;
       allow write: if false;
+    }
+
+    // Alert subscriptions: one document per device, keyed by uid.
+    match /alert_subscriptions/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == uid &&
+        isValidSubscription(request.resource.data) &&
+        request.resource.data.created_at == request.time;
+      allow update: if isSignedIn() && request.auth.uid == uid &&
+        isValidSubscription(request.resource.data) &&
+        request.resource.data.created_at == resource.data.created_at;
+      allow delete: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+    }
+
+    // Per-municipality air quality computed after each poll. Public read.
+    match /municipality_status/{municipality} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Municipality centroids and radius. Public read; edit in the console.
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Delivery audit log and per-subscriber send state. Server-only writes;
+    // admins may read the log for audits.
+    match /alert_log/{entryId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /alert_state/{stateId} {
+      allow read, write: if false;
     }
 
     // Pre-Stage 1 collection that held names and ages. Nothing writes to it.
