@@ -1,131 +1,208 @@
-/* SymptomReportForm.css */
-
-.symptom-report-form {
-  max-width: 420px;
+.report-form {
+  max-width: 640px;
   margin: 0 auto;
+  padding: 12px;
+  text-align: left;
+  font-size: 1.05rem;
+}
+
+.report-form h2 {
+  color: #1976d2;
+  margin: 0 0 4px;
+}
+
+.report-form__intro {
+  color: #555;
+  margin: 0 0 16px;
+}
+
+.report-form fieldset {
+  border: 1px solid #e0e0e0;
+  border-radius: 14px;
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
-  padding: 24px 18px 18px 18px;
-  font-family: 'Inter', Arial, sans-serif;
+  padding: 14px;
+  margin: 0 0 14px;
+}
+
+.report-form legend {
+  font-weight: 700;
+  color: #1976d2;
+  padding: 0 6px;
+}
+
+.report-form .hint {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0 0 8px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  min-height: 48px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 2px solid #bbb;
+  background: #fafafa;
   color: #222;
-}
-
-.symptom-report-form h2,
-.symptom-report-form label,
-.symptom-report-form .form-instructions,
-.symptom-report-form .form-step {
-  color: #222 !important;
-}
-
-.form-step input,
-.form-step select,
-.form-step textarea {
-  width: 100%;
-  padding: 8px 10px;
-  margin-top: 4px;
-  border: 1px solid #bdbdbd;
-  border-radius: 6px;
-  font-size: 1rem;
-  box-sizing: border-box;
-  color: #222 !important;
-  background: #fff !important;
-}
-
-.form-step input::placeholder,
-.form-step textarea::placeholder {
-  color: #888 !important;
-}
-
-.add-btn, .next-btn, .back-btn, .submit-btn {
-  background: #1976d2;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
   font-size: 1rem;
   cursor: pointer;
-  transition: background 0.2s;
+  touch-action: manipulation;
 }
 
-.add-btn {
-  background: #43a047;
+.chip[aria-pressed='true'],
+.chip[aria-checked='true'] {
+  background: #1976d2;
+  border-color: #1976d2;
+  color: #fff;
+  font-weight: 700;
 }
 
-.add-btn:hover, .next-btn:hover, .back-btn:hover, .submit-btn:hover {
-  background: #1565c0;
+.chip:focus-visible {
+  outline: 3px solid #ffb300;
+  outline-offset: 2px;
 }
 
-.back-btn {
-  background: #bdbdbd;
+.scale {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.scale .chip {
+  border-radius: 12px;
+  padding: 10px 0;
+  text-align: center;
+}
+
+.scale__labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 4px;
+}
+
+.report-form label.block {
+  display: block;
+  font-weight: 600;
+  margin: 10px 0 4px;
+}
+
+.report-form input[type='datetime-local'],
+.report-form select,
+.report-form textarea {
+  width: 100%;
+  min-height: 48px;
+  font-size: 1rem;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 2px solid #bbb;
+  box-sizing: border-box;
+  background: #fff;
   color: #222;
 }
 
-.submit-btn {
-  background: #388e3c;
+.report-form textarea {
+  min-height: 80px;
+  resize: vertical;
 }
 
-ul {
-  margin: 0;
+.btn {
+  min-height: 52px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.btn--primary {
+  background: #1976d2;
+  color: #fff;
+  width: 100%;
+}
+
+.btn--primary:disabled {
+  background: #9ec3ea;
+  cursor: not-allowed;
+}
+
+.btn--secondary {
+  background: #fff;
+  color: #1976d2;
+  border: 2px solid #1976d2;
+}
+
+.report-form__error {
+  color: #b71c1c;
+  background: #ffebee;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 0 0 12px;
+}
+
+.report-form__success {
+  background: #e8f5e9;
+  border: 2px solid #43a047;
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.report-form__privacy {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 12px;
+}
+
+.report-history {
+  max-width: 640px;
+  margin: 24px auto 0;
+  padding: 0 12px;
+  text-align: left;
+}
+
+.report-history h3 {
+  color: #1976d2;
+  margin: 0 0 8px;
+}
+
+.report-history ul {
+  list-style: none;
   padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
 }
 
-li {
-  margin-bottom: 4px;
+.report-history li {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 12px;
 }
 
-.error {
-  color: #d32f2f;
-  font-weight: 500;
+.report-history__when {
+  font-weight: 700;
 }
 
-.success {
-  color: #388e3c;
-  font-weight: 500;
+.report-history__meta {
+  color: #555;
+  font-size: 0.9rem;
 }
 
-.progress-bar {
-  margin-bottom: 18px;
+.location-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
 }
-
-.review-summary {
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
-@media (max-width: 600px) {
-  .symptom-report-form {
-    padding: 12px 4px 8px 4px;
-  }
-  .form-step input, .form-step select {
-    font-size: 0.98rem;
-  }
-  .add-btn, .next-btn, .back-btn, .submit-btn {
-    font-size: 0.98rem;
-    padding: 7px 10px;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .symptom-report-form {
-    background: #222;
-    color: #fff;
-  }
-  .symptom-report-form h2,
-  .symptom-report-form label,
-  .symptom-report-form .form-instructions,
-  .symptom-report-form .form-step {
-    color: #fff !important;
-  }
-  .form-step input,
-  .form-step select,
-  .form-step textarea {
-    background: #222 !important;
-    color: #fff !important;
-    border: 1px solid #888;
-  }
-  .form-step input::placeholder,
-  .form-step textarea::placeholder {
-    color: #bbb !important;
-  }
-} 

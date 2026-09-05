@@ -6,8 +6,60 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.admin == true;
     }
 
-    // Sensor snapshots and reading history are written only by the
-    // pollPurpleAir Cloud Function (Admin SDK bypasses rules). Public read.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Keep in sync with functions/src/lib/municipalities.ts and
+    // frontend/src/lib/municipalities.ts.
+    function isMunicipality(m) {
+      return m in [
+        'Clairton', 'Glassport', 'Liberty', 'Lincoln', 'Port Vue', 'McKeesport',
+        'Elizabeth Township', 'Elizabeth Borough', 'Jefferson Hills', 'West Mifflin',
+        'Dravosburg', 'Duquesne', 'Braddock', 'North Braddock', 'Rankin', 'East Pittsburgh'
+      ];
+    }
+
+    function isScale1to5OrNull(v) {
+      return v == null || (v is int && v >= 1 && v <= 5);
+    }
+
+    function isStringList(v, max) {
+      return v is list && v.size() <= max;
+    }
+
+    function isLocationOrNull(loc) {
+      return loc == null || (
+        loc is map && loc.keys().hasOnly(['lat', 'lng']) &&
+        loc.lat is number && loc.lng is number &&
+        loc.lat >= 40.0 && loc.lat <= 40.7 && loc.lng >= -80.3 && loc.lng <= -79.5
+      );
+    }
+
+    // A report may contain only these keys. This is what keeps names,
+    // emails and phone numbers out of the collection.
+    function isValidReport(r) {
+      return r.keys().hasOnly([
+          'uid', 'schema_version', 'odor', 'symptoms', 'actions', 'cause',
+          'occurred_at', 'hour_bucket', 'municipality', 'location', 'note', 'created_at'
+        ]) &&
+        r.uid == request.auth.uid &&
+        r.schema_version == 2 &&
+        r.odor is map && r.odor.keys().hasOnly(['present', 'types', 'intensity']) &&
+        r.odor.present is bool && isStringList(r.odor.types, 7) && isScale1to5OrNull(r.odor.intensity) &&
+        r.symptoms is map && r.symptoms.keys().hasOnly(['list', 'severity']) &&
+        isStringList(r.symptoms.list, 12) && isScale1to5OrNull(r.symptoms.severity) &&
+        isStringList(r.actions, 8) &&
+        r.cause is string && r.cause.size() <= 40 &&
+        r.occurred_at is timestamp &&
+        r.hour_bucket is string && r.hour_bucket.size() == 13 &&
+        isMunicipality(r.municipality) &&
+        isLocationOrNull(r.location) &&
+        (r.note == null || (r.note is string && r.note.size() <= 500)) &&
+        r.created_at == request.time;
+    }
+
+    // Sensor snapshots and reading history: written only by pollPurpleAir.
     match /sensors/{sensorId} {
       allow read: if true;
       allow write: if false;
@@ -18,30 +70,40 @@ service cloud.firestore {
       }
     }
 
-    // Poller status (last run, counts). Public read, server write only.
+    // Poller status. Public read, server write only.
     match /meta/{docId} {
       allow read: if true;
       allow write: if false;
     }
 
-    // Legacy symptom reports. Replaced by `reports` in the OSAC work item.
+    // Community reports (Odor, Symptoms, Actions, Cause).
+    // Readable and writable only by the author; admins can read everything.
+    // No one can list or read another person's report from the client.
+    match /reports/{reportId} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidReport(request.resource.data);
+      allow update: if isSignedIn() && resource.data.uid == request.auth.uid &&
+        isValidReport(request.resource.data) &&
+        request.resource.data.created_at == resource.data.created_at;
+      allow delete: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    // Hourly per-municipality aggregates, small counts suppressed.
+    // This is what the public map and dashboard read.
+    match /aggregates/{aggregateId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Legacy collections from before Stage 1. Kept readable to admins only so
+    // nothing new is written to them; removed in the cleanup work item.
     match /symptomReports/{reportId} {
-      allow read, update, delete: if request.auth != null &&
-        (request.auth.uid == resource.data.userId || isAdmin());
-      allow create: if request.auth != null &&
-        request.auth.uid == request.resource.data.userId;
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
     match /users/{userId} {
-      allow read, write: if request.auth != null &&
-        (request.auth.uid == userId || isAdmin());
-    }
-
-    match /healthAssessments/{assessmentId} {
-      allow read, update, delete: if request.auth != null &&
-        (request.auth.uid == resource.data.userId || isAdmin());
-      allow create: if request.auth != null &&
-        request.auth.uid == request.resource.data.userId;
+      allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
 
     // Everything else is denied by default.

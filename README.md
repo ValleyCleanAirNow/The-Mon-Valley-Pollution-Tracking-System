@@ -14,8 +14,10 @@ Contact: Qiyam Ansari, Executive Director, VCAN, qiyam@valleycleanair.com
   shown but flagged and left out of public averages.
 - **Community dashboard.** Mon Valley average corrected PM2.5 and AQI, with
   plain-language guidance.
-- **Symptom reports.** Community health reports (being restructured to the
-  Odor, Symptoms, Actions, Cause framework in Stage 1).
+- **Community reports.** A one-minute Odor, Symptoms, Actions, suspected
+  Cause form. Reports are pseudonymous (Firebase Anonymous Auth), readable
+  only by their author, and published only as hourly per-municipality
+  aggregates once three or more people report in the same hour.
 - **BreatheAI.** Chat assistant for air quality and health questions.
 
 ## Architecture
@@ -90,11 +92,31 @@ firebase emulators:start
 To trigger the poller by hand in the emulator, open the Functions shell
 (`cd functions && npm run shell`) and run `pollPurpleAir()`.
 
+### Enable Anonymous sign-in (one time)
+
+The report form signs every device in anonymously so reports carry a stable
+pseudonymous `uid`. In the Firebase console open Authentication, Sign-in
+method, and enable **Anonymous**. Until this is on, the form shows
+"Reporting is not enabled yet".
+
+### Grant an admin
+
+Admins can read every report. Set the custom claim once per admin account
+with the Admin SDK (never from the client):
+
+```js
+// node -e "..." with GOOGLE_APPLICATION_CREDENTIALS set
+const admin = require('firebase-admin');
+admin.initializeApp();
+admin.auth().setCustomUserClaims('<uid>', { admin: true });
+```
+
 ### Tests
 
 ```bash
-(cd functions && npm test)      # jest: correction, AQI, transform, backoff, poll
+(cd functions && npm test)      # jest: correction, AQI, transform, backoff, poll, aggregates
 (cd frontend && CI=true npm test -- --watchAll=false)
+(cd rules-tests && npm install && npm test)   # Firestore rules against the emulator
 ```
 
 ## Deployment
@@ -181,11 +203,54 @@ Status of the most recent poll. Public read.
 | `fetched`, `included`, `excluded` | number | Row counts from the last run. |
 | `data_time_stamp` | number or null | PurpleAir's server data timestamp (Unix seconds). |
 
+### `reports/{reportId}`
+
+One community report. Created by the client under Firebase Anonymous Auth.
+Readable and deletable only by its author (`uid`) or an admin claim. Never
+listed publicly. `firestore.rules` rejects any document with keys outside
+this table, which is what keeps names, emails and phone numbers out.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `uid` | string | Anonymous Auth uid of the reporting device. Must equal the caller. |
+| `schema_version` | number | `2`. |
+| `odor.present` | boolean | Whether an odor was noticed. |
+| `odor.types` | string[] | Any of `rotten_eggs_sulfur`, `tar_asphalt`, `burning_smoke`, `chemical_solvent`, `metallic`, `sweet`, `other`. |
+| `odor.intensity` | 1 to 5 or null | Strength of the odor. Null when `present` is false. |
+| `symptoms.list` | string[] | Any of `coughing`, `wheezing`, `shortness_of_breath`, `chest_tightness`, `throat_irritation`, `eye_irritation`, `headache`, `nausea`, `dizziness`, `fatigue`, `none`, `other`. |
+| `symptoms.severity` | 1 to 5 or null | Overall severity. Null when the list is `none`. |
+| `actions` | string[] | Any of `closed_windows`, `stayed_inside`, `used_inhaler_or_medication`, `ran_air_purifier`, `left_area`, `called_achd`, `none`, `other`. |
+| `cause` | string | One of `clairton_coke_works`, `edgar_thomson_works`, `irvin_works`, `traffic`, `other_industry`, `dont_know`, `other`. |
+| `occurred_at` | Timestamp | When the reporter says it happened. |
+| `hour_bucket` | string | UTC hour of `occurred_at`, `YYYY-MM-DDTHH`. Aggregation key. |
+| `municipality` | string | One of the municipalities in `functions/src/lib/municipalities.ts`. |
+| `location` | map or null | `{lat, lng}` rounded to 3 decimals (about 100 m), inside the Mon Valley box. Never a street address. |
+| `note` | string or null | Free text, at most 500 characters. |
+| `created_at` | Timestamp | Server time; the rules require `request.time`. |
+
+### `aggregates/{municipality}_{hourBucket}`
+
+Hourly summary per municipality, maintained by the `aggregateReports`
+trigger on every report write. **Buckets with fewer than 3 reports are
+deleted, not written**, so a lone report can never be inferred. Public read.
+This is what the map and dashboard use.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `municipality` | string | Municipality name. |
+| `hour_bucket` | string | UTC hour, `YYYY-MM-DDTHH`. |
+| `hour_start` | Timestamp | Start of that hour. |
+| `report_count` | number | Reports in the bucket (always 3 or more). |
+| `odor_present_count` | number | Reports with `odor.present` true. |
+| `top_symptoms`, `top_odors`, `top_actions`, `top_causes` | `{value, count}[]` | Up to 5 most common values; `none` is excluded. |
+| `mean_symptom_severity`, `mean_odor_intensity` | number or null | Means to one decimal. |
+| `updated_at` | Timestamp | Last recompute. |
+
 ### Legacy collections
 
-`symptomReports`, `users`, `healthAssessments` predate Stage 1 and are being
-replaced. Their rules remain in `firestore.rules` until the reports work item
-migrates them.
+`symptomReports`, `users`, `healthAssessments` predate Stage 1. Nothing
+writes to them any more. `symptomReports` is admin read-only and is removed
+in the cleanup work item.
 
 ## Repository layout
 
