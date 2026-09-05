@@ -20,7 +20,7 @@ Contact: Qiyam Ansari, Executive Director, VCAN, qiyam@valleycleanair.com
   aggregates once three or more people report in the same hour.
 - **Threshold alerts.** Residents pick municipalities, a level (Unhealthy for
   Sensitive Groups, or Unhealthy), and channels (device notification, email,
-  optional SMS). Alerts fire after two consecutive polls at or above the level
+  optional SMS). Alerts fire after two consecutive hourly polls at or above the level
   and again when it clears; the same level is not repeated within 3 hours.
 - **BreatheAI.** Chat assistant for air quality and health questions.
 
@@ -38,7 +38,7 @@ Third-party APIs (PurpleAir, Together AI) are called only from Cloud
 Functions. The browser never holds an API key; it reads Firestore.
 
 ```
-PurpleAir API ──(every 10 min)──> pollPurpleAir ──> sensors/{id}, readings/{ts}, meta/purpleair_poll
+PurpleAir API ──(hourly)──> pollPurpleAir ──> sensors/{id}, readings/{ts}, meta/purpleair_poll
                                                                                         │
                                                           onPollComplete <──────────────┘
                                                              ├─> municipality_status/{m}
@@ -197,9 +197,13 @@ denies everything.
 
 The poller requests 13 fields for every sensor in the bounding box every 10
 minutes (4,320 requests per month). PurpleAir charges per request plus per
-sensor per field. With roughly 40 sensors that is about 4.5 million points a
-month. To reduce cost, trim `REQUESTED_FIELDS` or lengthen the schedule in
-`functions/src/purpleair/config.ts` and `poll.ts`.
+sensor per field. The box is drawn around the three Mon Valley Works mills
+and holds about 55 sensors (about 40 usable), roughly 1 million points a
+month. The earlier, wider box reached into Pittsburgh and returned 142
+sensors at nearly three times the cost. To reduce cost further, trim
+`REQUESTED_FIELDS` or lengthen the schedule in
+`functions/src/purpleair/config.ts` and `poll.ts`. Sensors that drop out of
+the box are deleted from `sensors` after 24 hours without a refresh.
 
 ## Data dictionary
 
@@ -254,6 +258,7 @@ Status of the most recent poll. Public read.
 | `last_success_at` | Timestamp | Most recent run that wrote data. |
 | `last_error`, `last_error_at` | string, Timestamp | Present after a failed run. |
 | `fetched`, `included`, `excluded` | number | Row counts from the last run. |
+| `pruned` | number | Sensor documents deleted this run for not being refreshed in 24 hours. |
 | `data_time_stamp` | number or null | PurpleAir's server data timestamp (Unix seconds). |
 
 ### `reports/{reportId}`

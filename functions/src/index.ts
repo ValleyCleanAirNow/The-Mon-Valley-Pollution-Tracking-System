@@ -1,7 +1,7 @@
 /**
  * Cloud Functions for Mon Valley Pollution Tracking System
  *
- * - pollPurpleAir: scheduled PurpleAir poller (every 10 minutes) that applies
+ * - pollPurpleAir: scheduled PurpleAir poller (every hour) that applies
  *   the EPA correction and AQI and writes to Firestore. See src/purpleair/.
  * - aggregateReports: Firestore trigger that maintains hourly per-municipality
  *   aggregates of community reports with small-count suppression.

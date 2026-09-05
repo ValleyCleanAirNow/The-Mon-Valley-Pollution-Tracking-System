@@ -8,12 +8,27 @@
 
 export const PURPLEAIR_SENSORS_URL = "https://api.purpleair.com/v1/sensors";
 
+/**
+ * Focused on the three Mon Valley Works mills (Clairton Coke Works, Irvin
+ * Works, Edgar Thomson) while still containing every municipality centroid
+ * in config/municipalities. Sized in Sept 2026 to about 55 sensors, of which
+ * about 40 pass the exclusion rules. Widening it toward Pittsburgh roughly
+ * triples API point usage.
+ */
 export const BOUNDING_BOX = {
-  nwlat: 40.45,
-  nwlng: -80.05,
-  selat: 40.20,
-  selng: -79.75,
+  nwlat: 40.425,
+  nwlng: -79.95,
+  selat: 40.255,
+  selng: -79.795,
 } as const;
+
+/**
+ * Sensor documents not refreshed for this long are deleted. A sensor stops
+ * being refreshed when it leaves the bounding box or is removed from
+ * PurpleAir; sensors that are merely offline keep being returned by the API
+ * and are flagged `stale` instead.
+ */
+export const PRUNE_UNPOLLED_AFTER_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Fields requested from PurpleAir. `sensor_index` is always returned first
@@ -38,11 +53,15 @@ export const REQUESTED_FIELDS = [
 
 export type RequestedField = (typeof REQUESTED_FIELDS)[number];
 
+/** How often pollPurpleAir runs. Keep in sync with `schedule` in poll.ts. */
+export const POLL_INTERVAL_MINUTES = 60;
+
 /** Exclusion thresholds for public averages. Sensors are stored regardless. */
 export const EXCLUSION = {
   minConfidence: 70,
   /** PurpleAir location_type: 0 = outside, 1 = inside. */
   indoorLocationType: 1,
+  /** A sensor silent for longer than this is flagged `stale`. */
   maxAgeSeconds: 2 * 60 * 60,
 } as const;
 

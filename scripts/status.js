@@ -22,7 +22,7 @@ const fmt = (ts) => (ts && ts.toDate ? ts.toDate().toLocaleString() : String(ts 
 
   const poll = await db.collection('meta').doc('purpleair_poll').get();
   console.log('== Last poll (meta/purpleair_poll)');
-  if (!poll.exists) console.log('  none yet. The scheduler runs every 10 minutes after functions deploy.');
+  if (!poll.exists) console.log('  none yet. The scheduler runs hourly after functions deploy.');
   else {
     const p = poll.data();
     console.log(`  last_run_at      ${fmt(p.last_run_at)}   ok=${p.ok}`);

@@ -51,10 +51,10 @@ export const COLLECTIONS = {
   log: "alert_log",
 } as const;
 
-/** Polls of history kept on each municipality_status document (1 hour). */
+/** Polls of history kept on each municipality_status document (6 hours at hourly polling). */
 export const STATUS_HISTORY_LENGTH = 6;
 
-/** Two consecutive polls (20 minutes) must agree before a message is sent. */
+/** Two consecutive polls (2 hours at hourly polling) must agree before a message is sent. */
 export const CONSECUTIVE_POLLS_REQUIRED = 2;
 
 /** Minimum gap before the same level is re-sent to the same subscriber. */

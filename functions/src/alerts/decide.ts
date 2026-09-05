@@ -2,7 +2,7 @@
  * Pure decision logic for one subscriber and one municipality.
  *
  * - Alert when the category has been at or above the subscriber's threshold
- *   on the last two consecutive polls.
+ *   on the last two consecutive polls (two hours at the hourly poll cadence).
  * - "Improving" when it has been below the threshold on the last two polls
  *   and an alert is currently active for this subscriber.
  * - Do not re-send the same (or lower) level within RESEND_AFTER_MS unless

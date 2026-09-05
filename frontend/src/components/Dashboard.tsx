@@ -71,7 +71,7 @@ const Dashboard: React.FC = () => {
         </div>
         <div className="dashboard__headline-category">{summary.category ?? 'Waiting for sensor data'}</div>
         <div className="dashboard__headline-advice">
-          {summary.category ? CATEGORY_ADVICE[summary.category] : 'Sensor readings update every 10 minutes.'}
+          {summary.category ? CATEGORY_ADVICE[summary.category] : 'Sensor readings update every hour.'}
         </div>
       </section>
 
