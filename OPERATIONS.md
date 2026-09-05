@@ -9,7 +9,7 @@ qiyam@valleycleanair.com.
 | Component | Where | How to see it |
 | --- | --- | --- |
 | Web app | Firebase Hosting | Firebase console, Hosting |
-| `pollPurpleAir` | Cloud Functions v2, `us-central1`, every 10 minutes | Cloud Scheduler job + function logs |
+| `pollPurpleAir` | Cloud Functions v2, `us-central1`, every hour | Cloud Scheduler job + function logs |
 | `aggregateReports` | Cloud Functions v2 Firestore trigger on `reports/{id}` | function logs |
 | `onPollComplete` | Cloud Functions v2 Firestore trigger on `meta/purpleair_poll` | function logs, `alert_log` |
 | `llama3Chat`, `healthCheck` | Cloud Functions v2 HTTPS | function logs |
@@ -29,7 +29,7 @@ entries, and how many legacy `symptomReports` documents remain.
 ## Check that polling is healthy
 
 1. Firestore, document `meta/purpleair_poll`. `last_success_at` should be
-   within the last 10 to 20 minutes. `fetched` should be roughly the number
+   within the last 60 to 70 minutes. `fetched` should be roughly the number
    of PurpleAir sensors in the box (about 40). If `last_error` is present,
    read it first.
 2. Logs:
@@ -88,18 +88,19 @@ then `firebase deploy --only functions`.
 
 | Setting | File | Default |
 | --- | --- | --- |
-| Bounding box | `functions/src/purpleair/config.ts` `BOUNDING_BOX` | nw 40.45, -80.05; se 40.20, -79.75 |
+| Bounding box | `functions/src/purpleair/config.ts` `BOUNDING_BOX` | nw 40.425, -79.95; se 40.255, -79.795 (the three mills plus all 16 centroids) |
+| Prune sensors not refreshed for | `functions/src/purpleair/config.ts` `PRUNE_UNPOLLED_AFTER_MS` | 24 h |
 | Fields requested (cost) | `functions/src/purpleair/config.ts` `REQUESTED_FIELDS` | 13 fields |
 | Exclusion: min confidence | `functions/src/purpleair/config.ts` `EXCLUSION.minConfidence` | 70 |
 | Exclusion: max age | `functions/src/purpleair/config.ts` `EXCLUSION.maxAgeSeconds` | 7200 (2 h) |
-| Poll frequency | `functions/src/purpleair/poll.ts` `schedule` | `every 10 minutes` |
+| Poll frequency | `functions/src/purpleair/poll.ts` `schedule` | `every hour` |
 | Reading retention | `functions/src/purpleair/config.ts` `READING_RETENTION_DAYS` and the TTL in `firestore.indexes.json` | 30 days |
 | Correction equation | `functions/src/lib/correction.ts` `CORRECTION_MODEL` | `barkjohn_2021` |
 | AQI breakpoints | `functions/src/lib/aqi.ts` and `frontend/src/lib/aqi.ts` | EPA 2024 |
 | Aggregate suppression floor | `functions/src/reports/aggregate.ts` `MIN_REPORTS_PER_BUCKET` | 3 |
-| Stale-data banner | `frontend/src/components/SensorMap.tsx` `STALE_AFTER_MS` | 30 min |
+| Stale-data banner | `frontend/src/components/SensorMap.tsx` `STALE_AFTER_MS` | 90 min |
 | Alert radius and centroids | Firestore `config/municipalities` (no deploy) | 2 km, borough centres |
-| Consecutive polls before alerting | `functions/src/alerts/config.ts` `CONSECUTIVE_POLLS_REQUIRED` | 2 |
+| Consecutive polls before alerting | `functions/src/alerts/config.ts` `CONSECUTIVE_POLLS_REQUIRED` | 2 (two hours) |
 | Re-send gap for the same level | `functions/src/alerts/config.ts` `RESEND_AFTER_MS` | 3 h |
 | Alert thresholds offered | `functions/src/alerts/decide.ts` `THRESHOLD_CATEGORY` and `frontend/src/types/alerts.ts` | USG, Unhealthy |
 | Message wording | `functions/src/alerts/messages.ts` | see file |

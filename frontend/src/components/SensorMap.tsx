@@ -19,8 +19,8 @@ interface SensorMapProps {
 const MAP_CENTER: [number, number] = [40.33, -79.9];
 const MAP_ZOOM = 11;
 
-/** How old the newest poll may be before we warn the user. */
-const STALE_AFTER_MS = 30 * 60 * 1000;
+/** How old the newest poll may be before we warn the user. Polls are hourly. */
+const STALE_AFTER_MS = 90 * 60 * 1000;
 
 const EXCLUDE_LABELS: Record<string, string> = {
   low_confidence: 'sensor confidence below 70%',

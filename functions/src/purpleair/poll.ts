@@ -1,7 +1,7 @@
 /**
  * Scheduled PurpleAir poller.
  *
- * Every 10 minutes: fetch sensors in the Mon Valley bounding box, apply the
+ * Every hour: fetch sensors in the Mon Valley bounding box, apply the
  * EPA correction and AQI, flag sensors to exclude from public averages, and
  * write the latest snapshot plus a history reading to Firestore.
  *
@@ -14,7 +14,7 @@ import * as logger from "firebase-functions/logger";
 import { defineSecret } from "firebase-functions/params";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { fetchSensors, rowsToObjects } from "./client";
-import { COLLECTIONS, POLL_STATUS_DOC } from "./config";
+import { COLLECTIONS, POLL_STATUS_DOC, PRUNE_UNPOLLED_AFTER_MS } from "./config";
 import { readingDocId, transformRow, TransformResult } from "./transform";
 
 export const purpleAirKey = defineSecret("PURPLEAIR_API_KEY");
@@ -29,6 +29,7 @@ export interface PollSummary {
   included: number;
   excluded: number;
   skipped_rows: number;
+  pruned: number;
   data_time_stamp: number | null;
   ok: boolean;
   error: string | null;
@@ -55,6 +56,25 @@ export async function writeSensors(db: admin.firestore.Firestore, results: Trans
   return written;
 }
 
+/**
+ * Delete sensor documents that have not been refreshed within
+ * PRUNE_UNPOLLED_AFTER_MS. Their `readings` subcollection expires on its own
+ * through the TTL policy. Returns the number of documents removed.
+ */
+export async function pruneUnpolledSensors(db: admin.firestore.Firestore, now: Date, maxAgeMs: number = PRUNE_UNPOLLED_AFTER_MS): Promise<number> {
+  const cutoff = new Date(now.getTime() - maxAgeMs);
+  const snap = await db.collection(COLLECTIONS.sensors).where("updated_at", "<", cutoff).get();
+  if (snap.empty) return 0;
+  let removed = 0;
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = db.batch();
+    for (const doc of snap.docs.slice(i, i + 400)) batch.delete(doc.ref);
+    await batch.commit();
+    removed += Math.min(400, snap.docs.length - i);
+  }
+  return removed;
+}
+
 /** One complete poll cycle. Never throws. */
 export async function runPoll(db: admin.firestore.Firestore, apiKey: string, now: Date = new Date()): Promise<PollSummary> {
   const summary: PollSummary = {
@@ -64,6 +84,7 @@ export async function runPoll(db: admin.firestore.Firestore, apiKey: string, now
     included: 0,
     excluded: 0,
     skipped_rows: 0,
+    pruned: 0,
     data_time_stamp: null,
     ok: false,
     error: null,
@@ -90,6 +111,12 @@ export async function runPoll(db: admin.firestore.Firestore, apiKey: string, now
 
     summary.written = await writeSensors(db, results, now);
     summary.ok = true;
+    try {
+      summary.pruned = await pruneUnpolledSensors(db, now);
+      if (summary.pruned > 0) logger.info("Pruned sensors no longer returned by PurpleAir", { pruned: summary.pruned });
+    } catch (err) {
+      logger.warn("Sensor prune failed; will retry next cycle", { error: err instanceof Error ? err.message : String(err) });
+    }
     logger.info("PurpleAir poll complete", { ...summary });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -107,6 +134,7 @@ export async function runPoll(db: admin.firestore.Firestore, apiKey: string, now
         fetched: summary.fetched,
         included: summary.included,
         excluded: summary.excluded,
+        pruned: summary.pruned,
         data_time_stamp: summary.data_time_stamp,
       },
       { merge: true },
@@ -120,7 +148,7 @@ export async function runPoll(db: admin.firestore.Firestore, apiKey: string, now
 
 export const pollPurpleAir = onSchedule(
   {
-    schedule: "every 10 minutes",
+    schedule: "every 60 minutes",
     timeZone: "America/New_York",
     region: "us-central1",
     secrets: [purpleAirKey],

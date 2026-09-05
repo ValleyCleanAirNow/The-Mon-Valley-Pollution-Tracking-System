@@ -157,7 +157,7 @@ if [[ "$SKIP_DEPLOY" == false ]]; then
 fi
 
 bold "6. First poll and centroid review"
-echo "The scheduler fires within 10 minutes. Then run:"
+echo "The scheduler fires within the hour. Then run:"
 echo "  node scripts/status.js"
 echo "It prints the last poll, sensor counts, and the seeded centroids for review."
 echo "Edit centroids at:"

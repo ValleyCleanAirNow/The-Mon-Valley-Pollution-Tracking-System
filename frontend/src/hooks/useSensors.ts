@@ -23,7 +23,7 @@ export interface SensorsState {
 
 /**
  * Live view of the `sensors` collection. Subscribes with onSnapshot so the
- * map and dashboard refresh on their own after each 10 minute poll.
+ * map and dashboard refresh on their own after each hourly poll.
  * Pass `initial` to bypass Firestore (used by tests and storybook-style demos).
  */
 export function useSensors(initial?: Sensor[]): SensorsState {

@@ -141,7 +141,7 @@ const AlertsView: React.FC = () => {
         <h2>Air quality alerts</h2>
         <p className="report-form__intro">
           Get a message when the air in your area reaches a level you choose, and another when it clears. Alerts are
-          based on two readings in a row, about 20 minutes apart, so a single spike will not page you.
+          based on two hourly readings in a row, so a single spike will not page you.
         </p>
 
         {authError && <div className="report-form__error" role="alert">{authError}</div>}
