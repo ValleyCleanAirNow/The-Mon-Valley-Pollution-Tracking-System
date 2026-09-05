@@ -185,7 +185,7 @@ if [[ "$DELETE_LEGACY" == true ]]; then
   yn="n"
   if [[ "$YES" == true ]]; then yn="y"; else read -r -p "Delete the symptomReports collection now? [y/N] " yn; fi
   if [[ "$yn" =~ ^[Yy]$ ]]; then
-    firebase firestore:delete symptomReports --recursive --yes --project "$PROJECT"
+    firebase firestore:delete symptomReports --recursive --force --project "$PROJECT"
     echo "Deleted. Remove the symptomReports block from firestore.rules and redeploy rules when convenient."
   fi
 fi
