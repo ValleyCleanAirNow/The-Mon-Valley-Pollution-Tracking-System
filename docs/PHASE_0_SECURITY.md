@@ -14,7 +14,7 @@ This phase removes the confirmed credential exposures from the TRACKER source tr
 
 ## CI behavior
 
-The `secret-scan` job runs before frontend and Functions jobs. It checks out full history and runs gitleaks in a pinned container; any finding fails the workflow. The repository configuration extends the default gitleaks rules with an EPA AQS URL-credential rule scoped to generated JSON under `rag_data/`.
+The `secret-scan` job runs before frontend and Functions jobs. It checks out full history, downloads the pinned gitleaks release, verifies the published archive checksum, scans the checked-out tree with the repository configuration, and pipes the complete `git log -p -U0 --full-history --all` stream through gitleaks. This two-part gate avoids a verified traversal incompatibility in which the scanner's repository mode reported zero commits against this repository. Any finding fails the workflow. The repository configuration extends the default gitleaks rules with an EPA AQS URL-credential rule scoped to generated JSON under `rag_data/`.
 
 ## Required secret names
 
