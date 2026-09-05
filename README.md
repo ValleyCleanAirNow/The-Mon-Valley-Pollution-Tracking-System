@@ -154,6 +154,19 @@ scripts/go-live.sh --delete-legacy
 The script enables Anonymous sign-in, prompts for each secret that is not
 already set, builds, deploys rules, indexes, storage, functions and hosting,
 and optionally exports and deletes the legacy `symptomReports` collection.
+
+It also runs unattended. Give it a service account key and the secret
+values through the environment and pass `--yes`:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json   # or GOOGLE_APPLICATION_CREDENTIALS_JSON='{...}'
+export PURPLEAIR_API_KEY=...  FIREBASE_WEB_API_KEY=...
+scripts/go-live.sh --yes --delete-legacy
+```
+
+The service account needs the Owner role for the one-time setup (it
+enables an auth provider, creates secrets, deploys functions, and deletes a
+collection). Delete the key afterwards.
 After the first poll, `node scripts/status.js` prints poll health, sensor
 counts, and the seeded centroids for review.
 
