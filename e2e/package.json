@@ -1,0 +1,14 @@
+{
+  "name": "e2e",
+  "private": true,
+  "description": "End-to-end smoke test against the Firebase Emulator Suite. See README.md.",
+  "scripts": {
+    "build:frontend": "cd ../frontend && REACT_APP_USE_EMULATORS=true REACT_APP_FIREBASE_API_KEY=demo REACT_APP_FIREBASE_PROJECT_ID=demo-mvpts REACT_APP_FIREBASE_AUTH_DOMAIN=demo-mvpts.firebaseapp.com REACT_APP_FIREBASE_APP_ID=demo npm run build",
+    "test": "firebase --config ../firebase.json emulators:exec --only auth,firestore,functions --project demo-mvpts \"node smoke.js\""
+  },
+  "devDependencies": {
+    "firebase": "^11.0.0",
+    "firebase-tools": "^13.35.1",
+    "playwright": "^1.47.0"
+  }
+}

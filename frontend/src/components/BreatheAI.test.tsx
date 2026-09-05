@@ -16,8 +16,7 @@ describe('BreatheAI Component', () => {
   test('displays status indicator', () => {
     render(<BreatheAI />);
     
-    // The status should be visible (either "Online" or "Typing...")
-    const statusElement = screen.getByText(/Online|Typing/);
+    const statusElement = screen.getByText(/Checking AI Status|AI Fully Operational/);
     expect(statusElement).toBeInTheDocument();
   });
 
