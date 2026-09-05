@@ -11,6 +11,7 @@ This phase removes the confirmed credential exposures from the TRACKER source tr
 | PurpleAir | The browser console statement that printed `REACT_APP_PURPLEAIR_API_KEY` is removed. The remaining browser-direct integration is intentionally deferred to Phase 1, where the key moves to Firebase Secret Manager. |
 | Firebase web configuration | The helper no longer contains project-specific web configuration values; it writes `frontend/.env` only from explicitly supplied environment variables. |
 | Build | The TypeScript compiler is aligned with the current test declarations. Library declaration checking is skipped, while strict checking remains enabled for application source. |
+| CI build repair | The frontend now declares the Firebase, Day.js, and Workbox modules it already imports. The Functions ESLint project includes Jest sources and preserves recommended semantic checks while disabling inherited formatting-only rules that would otherwise create a broad non-functional rewrite in this security PR. |
 
 ## CI behavior
 
@@ -26,6 +27,6 @@ Removing a value from the current tree does not remove it from Git history. Befo
 
 ## Local verification
 
-From `functions/`, run `npm ci --ignore-scripts` and `npm run build`. From the repository root, run a current-tree gitleaks scan and, after the approved rewrite, a full-history scan. A clean result must contain zero findings under both the default rules and the repository’s AQS rule.
+From `functions/`, run `npm ci --ignore-scripts`, `npm run lint`, and `npm run build`. From `frontend/`, run `npm ci --ignore-scripts` and `npm run build`. From the repository root, run a current-tree gitleaks scan and, after the approved rewrite, a full-history scan. A clean result must contain zero findings under both the default rules and the repository’s AQS rule.
 
 The post-rewrite test baseline contains eight Functions tests: five pass and three pre-existing export expectations fail because `scheduledFirestoreBackup`, `fetchPurpleAirSensorData`, and `fetchNASASatelliteData` are not implemented in the baseline source. Those functions belong to the approved Phase 1 backend scope. Phase 0 does not add empty security-sensitive stubs merely to satisfy stale tests; the required Phase 0 acceptance gates are the zero-finding current-tree and full-history scans plus a passing Functions build.

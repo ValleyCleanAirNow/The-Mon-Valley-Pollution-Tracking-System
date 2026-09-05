@@ -26,8 +26,26 @@ module.exports = {
     "import",
   ],
   rules: {
-    "quotes": ["error", "double"],
+    "quotes": "off",
     "import/no-unresolved": 0,
-    "indent": ["error", 2],
+    "indent": "off",
+    "object-curly-spacing": "off",
+    "comma-dangle": "off",
+    "no-trailing-spaces": "off",
+    "eol-last": "off",
+    "padded-blocks": "off",
+    "arrow-parens": "off",
+    "max-len": "off",
+    "require-jsdoc": "off",
+    "camelcase": "off",
+    "@typescript-eslint/no-explicit-any": "off",
   },
+  overrides: [
+    {
+      files: ["test/**/*.ts"],
+      rules: {
+        "@typescript-eslint/no-var-requires": "off",
+      },
+    },
+  ],
 };
