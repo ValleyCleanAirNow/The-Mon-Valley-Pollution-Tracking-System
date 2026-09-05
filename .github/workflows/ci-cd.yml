@@ -7,7 +7,7 @@ on:
     branches: [ main, develop ]
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '20'
   NODE_VERSION_BACKEND: '22'
 
 jobs:
@@ -69,9 +69,8 @@ jobs:
     - name: Run frontend linting
       run: npm run lint --if-present
     
-    - name: Run frontend tests (skip if failing)
-      run: npm test -- --watchAll=false --passWithNoTests || echo "Frontend tests failed but continuing..."
-      continue-on-error: true
+    - name: Run frontend tests
+      run: npm test -- --watchAll=false
     
     - name: Build frontend
       run: npm run build
@@ -152,10 +151,52 @@ jobs:
     - name: Run Firestore rules tests
       run: npm test
 
+  # End-to-end smoke test: emulators + built frontend + headless Chromium
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [secret-scan]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ env.NODE_VERSION_BACKEND }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION_BACKEND }}
+
+    - name: Setup Java (Firestore emulator)
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Install dependencies
+      run: |
+        (cd functions && npm ci && npm run build)
+        (cd frontend && npm ci)
+        (cd e2e && npm ci && npx playwright install --with-deps chromium)
+
+    - name: Build frontend against emulators
+      working-directory: ./e2e
+      run: CI=true npm run build:frontend
+
+    - name: Run smoke test
+      working-directory: ./e2e
+      run: npm test
+
+    - name: Upload screenshots
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: e2e-screenshots
+        path: ./e2e/screenshots
+        retention-days: 7
+
   # Security Audit
   security:
     runs-on: ubuntu-latest
-    needs: [frontend, backend, rules]
+    needs: [frontend, backend, rules, e2e]
     
     steps:
     - name: Checkout code

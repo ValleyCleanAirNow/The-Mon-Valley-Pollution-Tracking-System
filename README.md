@@ -117,7 +117,12 @@ admin.auth().setCustomUserClaims('<uid>', { admin: true });
 (cd functions && npm test)      # jest: correction, AQI, transform, backoff, poll, aggregates
 (cd frontend && CI=true npm test -- --watchAll=false)
 (cd rules-tests && npm install && npm test)   # Firestore rules against the emulator
+(cd e2e && npm install && npm run build:frontend && npm test)   # full smoke test in the emulator
 ```
+
+The end-to-end test seeds sensors, files anonymous reports under the real
+rules, checks the aggregation trigger, and drives the built app in headless
+Chromium. See `e2e/README.md` and OPERATIONS.md.
 
 ## Deployment
 
@@ -138,7 +143,9 @@ gcloud firestore fields ttls list --collection-group=readings --project=mv-pollu
 ```
 
 CI (`.github/workflows/ci-cd.yml`) runs a full-history secret scan, builds
-and tests both packages, and deploys on pushes to `main`.
+and tests both packages, runs the Firestore rules tests in the emulator, and
+deploys on pushes to `main`. Cloud Storage is not used; `storage.rules`
+denies everything.
 
 ## PurpleAir API usage
 
@@ -256,18 +263,29 @@ in the cleanup work item.
 
 ```
 frontend/            React app (Create React App)
-  src/components/    SensorMap, Dashboard, SymptomReportForm, BreatheAI
-  src/hooks/         useSensors (Firestore onSnapshot)
-  src/lib/aqi.ts     Client AQI helpers (mirror of functions/src/lib/aqi.ts)
+  src/components/    SensorMap, AqiLegend, Dashboard, SymptomReportForm, BreatheAI
+  src/hooks/         useSensors, useAggregates, useMyReports, useAnonymousAuth
+  src/lib/           aqi.ts (mirror of functions/src/lib/aqi.ts), municipalities.ts
+  src/types/         sensor.ts, report.ts
 functions/           Cloud Functions
   src/purpleair/     Poller: config, client (backoff), transform, poll
-  src/lib/           AQI and EPA correction
+  src/reports/       Report schema and the aggregateReports trigger
+  src/lib/           AQI, EPA correction, municipalities
   test/              Jest unit tests
+rules-tests/         Firestore security rules tests (emulator)
+e2e/                 End-to-end smoke test (emulator + headless Chromium)
 firestore.rules      Security rules
 firestore.indexes.json  Indexes and the readings TTL policy
-docs/                Planning and protocol documents
+OPERATIONS.md        Runbook: keys, logs, thresholds, municipalities
+docs/                Planning and protocol documents; docs/archive/ is pre-Stage 1
 rag_ingest/          Offline scripts that build the BreatheAI knowledge base
 ```
+
+## Status
+
+Stage 1 work items 1 (server-side PurpleAir polling), 2 (community reports
+and aggregates), and 4 (cleanup and handoff) are complete. Work item 3,
+threshold alerts, is deferred; nothing in the system sends notifications.
 
 ## License
 

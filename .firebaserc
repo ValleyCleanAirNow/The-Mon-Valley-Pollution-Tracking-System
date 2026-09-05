@@ -1,8 +1,5 @@
 {
   "projects": {
-    "default": "mv-pollution-tracking-system",
-    "staging ": "mv-pollution-tracking-system"
-  },
-  "targets": {},
-  "etags": {}
+    "default": "mv-pollution-tracking-system"
+  }
 }

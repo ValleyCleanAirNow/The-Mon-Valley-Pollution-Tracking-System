@@ -6,13 +6,10 @@
  * - aggregateReports: Firestore trigger that maintains hourly per-municipality
  *   aggregates of community reports with small-count suppression.
  * - llama3Chat: BreatheAI chat proxy (Together AI, key via defineSecret)
- * - healthCheck, getMetrics: status endpoints used by the BreatheAI UI
- * - processSensorData, submitSymptomReport: legacy stubs kept for
- *   compatibility, slated for removal in the Stage 1 cleanup work item.
+ * - healthCheck: status endpoint used by the BreatheAI UI
  */
 
 import * as admin from "firebase-admin";
-import * as functions from 'firebase-functions';
 import { defineSecret } from 'firebase-functions/params';
 import { onRequest } from 'firebase-functions/v2/https';
 import cors from 'cors';
@@ -89,7 +86,7 @@ function retrieveRelevantData(query: string) {
 }
 
 // Proxy function for AI chat
-export const llama3Chat = onRequest({ secrets: [togetherKey] }, (request, response) => {
+export const llama3Chat = onRequest({ secrets: [togetherKey], region: 'us-central1' }, (request, response) => {
   corsHandler(request, response, async () => {
     try {
       console.log('=== FUNCTION STARTED ===');
@@ -221,65 +218,16 @@ Always provide accurate, helpful information and be empathetic to health concern
   });
 });
 
-// Health check function
-export const healthCheck = functions.https.onRequest((request, response) => {
+// Health check used by the BreatheAI status indicator.
+export const healthCheck = onRequest({ region: 'us-central1' }, (request, response) => {
   corsHandler(request, response, () => {
     response.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
       services: {
-        backend: 'running',
-        ollama: 'fully_operational',
-        database: 'connected',
-        ai_assistant: 'online'
+        ai_assistant: 'online',
       },
-      message: 'Firebase Cloud Functions are operational with full AI capabilities'
     });
   });
 });
 
-// Metrics function
-export const getMetrics = functions.https.onRequest((request, response) => {
-  corsHandler(request, response, () => {
-    response.json({
-      uptime: Date.now(),
-      requests: 0,
-      errors: 0,
-      errorRate: 0,
-      avgResponseTime: 0,
-      ollamaRequests: 0,
-      ollamaErrors: 0,
-      ollamaSuccessRate: 100,
-      activeUsers: 0,
-      features: {
-        chat: 0,
-        health: 0,
-        ollamaTest: 0
-      },
-      message: 'Metrics in fallback mode'
-    });
-  });
-});
-
-// Existing functions (keeping them for compatibility)
-export const processSensorData = functions.https.onRequest(async (req, res) => {
-  corsHandler(req, res, async () => {
-    try {
-      res.json({ message: 'Sensor data processing endpoint' });
-    } catch (error) {
-      console.error('Error processing sensor data', error);
-      res.status(500).json({ error: 'Failed to process sensor data' });
-    }
-  });
-});
-
-export const submitSymptomReport = functions.https.onRequest(async (req, res) => {
-  corsHandler(req, res, async () => {
-    try {
-      res.json({ message: 'Symptom report submission endpoint' });
-    } catch (error) {
-      console.error('Error submitting symptom report', error);
-      res.status(500).json({ error: 'Failed to submit symptom report' });
-    }
-  });
-});

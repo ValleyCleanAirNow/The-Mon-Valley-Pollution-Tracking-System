@@ -4,26 +4,12 @@ import SensorMap from './components/SensorMap';
 import SymptomReportForm from './components/SymptomReportForm';
 import Dashboard from './components/Dashboard';
 import BreatheAI from './components/BreatheAI';
-import UserTesting from './components/UserTesting';
-import AdminDashboard from './components/AdminDashboard';
-import { feedbackService, UserFeedback } from './services/feedbackService';
 
-type View = 'dashboard' | 'map' | 'symptoms' | 'ai' | 'testing' | 'admin';
+type View = 'dashboard' | 'map' | 'symptoms' | 'ai';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [language, setLanguage] = useState<'en' | 'es'>('en');
-
-  const handleFeedbackSubmit = async (feedback: UserFeedback) => {
-    try {
-      await feedbackService.submitFeedback(feedback);
-      console.log('Feedback submitted successfully');
-      // You could show a success message here
-    } catch (error) {
-      console.error('Failed to submit feedback:', error);
-      // You could show an error message here
-    }
-  };
 
   const renderView = () => {
     switch (currentView) {
@@ -32,13 +18,9 @@ function App() {
       case 'map':
         return <SensorMap onSensorSelect={() => {}} />;
       case 'symptoms':
-        return <SymptomReportForm onSuccess={(id) => console.log('Report submitted:', id)} />;
+        return <SymptomReportForm />;
       case 'ai':
         return <BreatheAI />;
-      case 'testing':
-        return <UserTesting onFeedbackSubmit={handleFeedbackSubmit} sessionId={`session-${Date.now()}`} />;
-      case 'admin':
-        return <AdminDashboard />;
       default:
         return <Dashboard />;
     }
@@ -95,20 +77,6 @@ function App() {
           >
             🤖 AI Assistant
           </button>
-          <button
-            className={`nav-button ${currentView === 'testing' ? 'active' : ''}`}
-            onClick={() => setCurrentView('testing')}
-            aria-current={currentView === 'testing' ? 'page' : undefined}
-          >
-            🧪 User Testing
-          </button>
-          <button
-            className={`nav-button ${currentView === 'admin' ? 'active' : ''}`}
-            onClick={() => setCurrentView('admin')}
-            aria-current={currentView === 'admin' ? 'page' : undefined}
-          >
-            🔧 Admin
-          </button>
         </nav>
       </header>
       <main className="App-main" role="main">
@@ -118,7 +86,7 @@ function App() {
       </main>
       <footer className="App-footer">
         <p>
-          © 2024 Mon Valley Pollution Tracking System.
+          © 2026 Valley Clean Air Now.
           <a href="/privacy" className="footer-link">Privacy Policy</a> |
           <a href="/accessibility" className="footer-link">Accessibility</a> |
           <a href="/contact" className="footer-link">Contact</a>

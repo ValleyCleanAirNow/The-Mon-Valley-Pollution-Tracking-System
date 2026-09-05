@@ -95,15 +95,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Legacy collections from before Stage 1. Kept readable to admins only so
-    // nothing new is written to them; removed in the cleanup work item.
+    // Pre-Stage 1 collection that held names and ages. Nothing writes to it.
+    // Admin read-only so it can be exported and then deleted (see OPERATIONS.md).
     match /symptomReports/{reportId} {
       allow read: if isAdmin();
       allow write: if false;
-    }
-
-    match /users/{userId} {
-      allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
 
     // Everything else is denied by default.
