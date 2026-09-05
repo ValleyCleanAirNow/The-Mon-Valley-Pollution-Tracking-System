@@ -38,6 +38,8 @@ module.exports = {
     "arrow-parens": "off",
     "max-len": "off",
     "require-jsdoc": "off",
+    // Deprecated rule; TypeScript types make @param/@return tags redundant.
+    "valid-jsdoc": "off",
     "camelcase": "off",
     "@typescript-eslint/no-explicit-any": "off",
   },

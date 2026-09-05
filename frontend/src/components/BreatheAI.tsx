@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import './BreatheAI.css';
 import axios from 'axios';
 
+const FUNCTIONS_BASE_URL =
+  process.env.REACT_APP_FUNCTIONS_BASE_URL || 'https://us-central1-mv-pollution-tracking-system.cloudfunctions.net';
+
 interface Message {
   id: string;
   text: string;
@@ -43,7 +46,7 @@ const BreatheAI: React.FC = () => {
 
   const checkAIStatus = async () => {
     try {
-      const response = await axios.get('https://us-central1-mv-pollution-tracking-system.cloudfunctions.net/healthCheck', { timeout: 5000 });
+      const response = await axios.get(`${FUNCTIONS_BASE_URL}/healthCheck`, { timeout: 5000 });
       if (response.data.services?.ollama === 'fully_operational' || response.data.services?.ai_assistant === 'online') {
         setAiStatus('cloud');
       } else {
@@ -69,7 +72,7 @@ const BreatheAI: React.FC = () => {
     setIsTyping(true);
     try {
       // Use Firebase Functions with Ollama Cloud
-      const baseUrl = 'https://us-central1-mv-pollution-tracking-system.cloudfunctions.net';
+      const baseUrl = FUNCTIONS_BASE_URL;
       const res = await axios.post(`${baseUrl}/llama3Chat`, { message: input });
       const response = res.data.response || 'Sorry, I could not generate a response.';
       addMessage(response, 'ai');
