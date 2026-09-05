@@ -3,6 +3,17 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
+import { TextDecoder, TextEncoder } from 'util';
+
+// firebase/auth pulls in undici, which expects these Web APIs in jsdom.
+Object.assign(global, { TextEncoder, TextDecoder });
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const streamWeb = require('stream/web');
+Object.assign(global, {
+  ReadableStream: streamWeb.ReadableStream,
+  WritableStream: streamWeb.WritableStream,
+  TransformStream: streamWeb.TransformStream,
+});
 
 // Mock Firebase for tests
 jest.mock('./firebase', () => ({

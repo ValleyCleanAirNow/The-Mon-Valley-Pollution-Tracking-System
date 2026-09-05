@@ -62,5 +62,14 @@
     "identity-obj-proxy": "^3.0.0",
     "jsdom": "^26.1.0",
     "ts-jest": "^29.4.0"
+  },
+  "jest": {
+    "transformIgnorePatterns": [
+      "[/\\\\]node_modules[/\\\\](?!(react-leaflet|@react-leaflet)[/\\\\]).+\\.(js|jsx|mjs|cjs|ts|tsx)$",
+      "^.+\\.module\\.(css|sass|scss)$"
+    ],
+    "moduleNameMapper": {
+      "^axios$": "axios/dist/node/axios.cjs"
+    }
   }
 }

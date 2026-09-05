@@ -1,0 +1,136 @@
+.sensor-map {
+  padding: 12px;
+  max-width: 1100px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.sensor-map h2 {
+  margin: 0 0 6px;
+  color: #1976d2;
+}
+
+.sensor-map__status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  font-size: 0.95rem;
+  color: #444;
+  margin-bottom: 10px;
+}
+
+.sensor-map__status .stale {
+  color: #b71c1c;
+  font-weight: 600;
+}
+
+.sensor-map__map {
+  height: 60vh;
+  min-height: 360px;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.aqi-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aqi-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+
+.aqi-legend__swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+}
+
+.sensor-popup {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  min-width: 200px;
+}
+
+.sensor-popup strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 1rem;
+}
+
+.sensor-popup__badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  margin: 4px 0;
+}
+
+.sensor-popup__excluded {
+  margin-top: 6px;
+  color: #b71c1c;
+  font-size: 0.8rem;
+}
+
+.sensor-map__list summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #1976d2;
+  padding: 8px 0;
+}
+
+.sensor-map__list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 6px;
+}
+
+.sensor-map__list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+
+.sensor-map__list li button {
+  all: unset;
+  cursor: pointer;
+  color: #1976d2;
+  text-decoration: underline;
+}
+
+.sensor-map__error {
+  color: #b71c1c;
+  padding: 12px;
+  background: #ffebee;
+  border-radius: 8px;
+}
+
+@media (max-width: 600px) {
+  .sensor-map__map {
+    height: 55vh;
+  }
+}

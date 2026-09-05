@@ -1,319 +1,209 @@
-<<<<<<< HEAD
-Mon Valley Pollution Tracking System
+# Mon Valley Pollution Tracking System
 
-A comprehensive, data-driven platform for monitoring air quality and health impacts in the Mon Valley region of Pennsylvania. Built with world-class attention to detail and modern web technologies.
+Community air-quality map, symptom reporting, and the BreatheAI assistant for
+the Monongahela Valley in Allegheny County, Pennsylvania. Built for
+[Valley Clean Air Now (VCAN)](https://valleycleanair.com).
 
-Features
+Contact: Qiyam Ansari, Executive Director, VCAN, qiyam@valleycleanair.com
 
-Interactive Sensor Map
-- Real-time PurpleAir sensor data integration
-- Interactive map with clickable sensors
-- PM2.5 readings and detailed sensor information
-- Mon Valley area focus (Clairton steel mills region)
+## What it does
 
-Community Health Dashboard
-- Real-time AQI data from OpenWeatherMap
-- PM2.5 forecast visualization (5-day)
-- Sensor statistics and symptom report tracking
-- Health advisories based on current air quality
+- **Sensor map.** PurpleAir PM2.5 sensors across the Mon Valley, corrected with
+  the EPA (Barkjohn 2021) equation and coloured by the 2024 US AQI categories.
+  Sensors that are indoor, low confidence, or silent for over two hours are
+  shown but flagged and left out of public averages.
+- **Community dashboard.** Mon Valley average corrected PM2.5 and AQI, with
+  plain-language guidance.
+- **Symptom reports.** Community health reports (being restructured to the
+  Odor, Symptoms, Actions, Cause framework in Stage 1).
+- **BreatheAI.** Chat assistant for air quality and health questions.
 
-BreatheAI Virtual Assistant
-- Powered by Ollama/Llama 3 LLM
-- Retrieval-Augmented Generation (RAG) with custom knowledge base
-- Mon Valley-specific air quality expertise
-- Health recommendations and pollution education
+## Architecture
 
-Symptom Reporting System
-- Multi-step form with OSAC methodology
-- Auto-populated user identification
-- Comprehensive symptom tracking
-- Real-time data collection and analysis
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 19, TypeScript, Create React App, react-leaflet, Firebase JS SDK |
+| Backend | Firebase Cloud Functions v2 (Node 22, TypeScript) |
+| Data | Cloud Firestore |
+| Hosting | Firebase Hosting |
+| Secrets | Firebase Secret Manager via `defineSecret` |
 
-User Testing & Feedback
-- Comprehensive testing scenarios
-- Usability feedback collection
-- Performance monitoring
-- Continuous improvement tracking
+Third-party APIs (PurpleAir, Together AI) are called only from Cloud
+Functions. The browser never holds an API key; it reads Firestore.
 
-Architecture
-
-Frontend
-- **React 18** with TypeScript
-- **Chart.js** for data visualization
-- **Leaflet** for interactive maps
-- **Firebase** for authentication and hosting
-- **Axios** for API communication
-
-Backend
-- **Node.js** with Express
-- **Ollama** integration for LLM capabilities
-- **RAG** system with custom knowledge base
-- **CORS** enabled for cross-origin requests
-
-Data Sources
-- **EPA** - Air quality standards and monitoring
-- **PurpleAir** - Community sensor network
-- **NASA** - Satellite-based monitoring
-- **OpenWeatherMap** - Weather and air quality data
-- **ACHD** - Allegheny County Health Department
-- **PA DEP** - Pennsylvania Department of Environmental Protection
-
-Quick Start
-
-Prerequisites
-- Node.js 18+ 
-- npm or yarn
-- Firebase CLI
-- Ollama (for AI features)
-
-Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd "MV Pollution Tracking System"
-   ```
-
-2. **Install dependencies**
-   ```bash
-   # Frontend dependencies
-   cd frontend
-   npm install
-   
-   # Backend dependencies
-   cd ../backend
-   npm install
-   ```
-
-3. **Environment Setup**
-   ```bash
-   # Create frontend environment file
-   cd ../frontend
-   cp .env.example .env
-   # Edit .env with your Firebase and API keys
-   ```
-
-4. **Start Ollama**
-   ```bash
-   # Install and start Ollama (if not already running)
-   ollama pull llama3:latest
-   ollama serve
-   ```
-
-5. **Start the backend**
-   ```bash
-   cd ../backend
-   node server.js
-   ```
-
-6. **Start the frontend**
-   ```bash
-   cd ../frontend
-   npm start
-   ```
-
-7. **Deploy to Firebase**
-   ```bash
-   cd ../frontend
-   npm run build
-   firebase deploy --only hosting
-   ```
-
-Configuration
-
-Environment Variables
-
-Frontend (.env)
-```env
-REACT_APP_FIREBASE_API_KEY=your_firebase_api_key
-REACT_APP_FIREBASE_AUTH_DOMAIN=mv-pollution-tracking-system.firebaseapp.com
-REACT_APP_FIREBASE_PROJECT_ID=mv-pollution-tracking-system
-REACT_APP_FIREBASE_STORAGE_BUCKET=mv-pollution-tracking-system.appspot.com
-REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
-REACT_APP_FIREBASE_APP_ID=your_app_id
-REACT_APP_OWM_API_KEY=your_openweathermap_api_key
-REACT_APP_PURPLEAIR_API_KEY=your_purpleair_api_key
+```
+PurpleAir API ──(every 10 min)──> pollPurpleAir ──> Firestore sensors/{id}
+                                                        └── readings/{ts}  (30 day TTL)
+                                                              │
+Browser <──── onSnapshot ───────────────────────────────────┘
 ```
 
-Firebase Configuration
+## Setup
 
-1. Create a Firebase project
-2. Enable Firestore Database
-3. Set up Firestore security rules
-4. Configure hosting
-5. Add your Firebase config to .env
+### Prerequisites
 
-Firestore Security Rules
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /processedSensorReadings/{docId} {
-      allow read: if true;
-      allow write: if false;
-    }
-    match /symptomReports/{docId} {
-      allow read: if true;
-      allow write: if false;
-    }
-  }
-}
-```
+- Node.js 22 (functions) and 18+ (frontend)
+- Firebase CLI: `npm install -g firebase-tools`, then `firebase login`
+- Java 11+ for the Firestore emulator
+- A Firebase project on the **Blaze** plan (scheduled functions and outbound
+  HTTP require it). Project id: `mv-pollution-tracking-system`.
 
-API Documentation
+### Install
 
-Backend Endpoints
-
-Health Check
-```http
-GET /api/health
-```
-Returns system health status.
-
-#### Ollama Test
-```http
-GET /api/ollama-test
-```
-Tests Ollama LLM connection.
-
-#### AI Chat
-```http
-POST /api/llama3-chat
-Content-Type: application/json
-
-{
-  "message": "Your question about air quality"
-}
-```
-
-Response:
-```json
-{
-  "response": "AI response text",
-  "context_used": true,
-  "sources": ["epa", "purpleair", "nasa"]
-}
-```
-
-Frontend API Integration
-
-The frontend communicates with:
-- **Firebase Firestore** - Data storage
-- **OpenWeatherMap API** - Air quality data
-- **PurpleAir API** - Sensor data
-- **Backend Server** - AI chat and data processing
-
-Testing
-
-System Test
 ```bash
-node test-system.js
+git clone <repo-url>
+cd The-Mon-Valley-Pollution-Tracking-System
+(cd functions && npm ci)
+(cd frontend && npm ci)
 ```
 
-This comprehensive test checks:
-- Backend health
-- Ollama connection
-- RAG knowledge base
-- Frontend deployment
+### Configure the frontend
 
-### Manual Testing Scenarios
+```bash
+cp frontend/.env.example frontend/.env
+# fill in the Firebase web app config from the Firebase console
+```
 
-1. **Dashboard Testing**
-   - Verify AQI data loading
-   - Check PM2.5 graph functionality
-   - Test responsive design
+### Configure server secrets
 
-2. **Sensor Map Testing**
-   - Verify sensor data loading
-   - Test map interactions
-   - Check sensor details popup
+Secrets are never committed. Set each one once per project:
 
-3. **BreatheAI Testing**
-   - Test chat functionality
-   - Verify knowledge base integration
-   - Check error handling
+```bash
+firebase functions:secrets:set PURPLEAIR_API_KEY   # read key from develop.purpleair.com
+firebase functions:secrets:set TOGETHER_API_KEY    # BreatheAI chat
+```
 
-4. **Symptom Report Testing**
-   - Test form validation
-   - Verify data submission
-   - Check user ID auto-population
+`functions/.env.example` lists every secret the functions expect.
 
-Monitoring & Analytics
+### Run locally with the emulator suite
 
-Health Monitoring
-- Backend health checks
-- Ollama connection monitoring
-- API response time tracking
+```bash
+# Terminal 1: functions + firestore + auth + hosting emulators
+cp functions/.env.example functions/.secret.local   # fill in values for local testing
+(cd functions && npm run build)
+firebase emulators:start
 
-Error Logging
-- Frontend error boundaries
-- Backend error logging
-- User feedback collection
+# Terminal 2: frontend dev server
+(cd frontend && npm start)
+```
 
-Usage Analytics
-- Page view tracking
-- Feature usage monitoring
-- User interaction analysis
+To trigger the poller by hand in the emulator, open the Functions shell
+(`cd functions && npm run shell`) and run `pollPurpleAir()`.
 
-Security
+### Tests
 
-- Environment variable protection
-- Firestore security rules
-- CORS configuration
-- Input validation and sanitization
+```bash
+(cd functions && npm test)      # jest: correction, AQI, transform, backoff, poll
+(cd frontend && CI=true npm test -- --watchAll=false)
+```
 
-Deployment
+## Deployment
 
-### Production Deployment
-1. Build frontend: `npm run build`
-2. Deploy to Firebase: `firebase deploy --only hosting`
-3. Start backend server
-4. Verify all endpoints
+```bash
+(cd frontend && npm run build)
+firebase deploy --only firestore:rules,firestore:indexes   # rules + TTL policy
+firebase deploy --only functions
+firebase deploy --only hosting
+```
 
-Environment Management
-- Development: Local development server
-- Staging: Firebase hosting preview
-- Production: Firebase hosting
+Deploying `firestore:indexes` applies the 30 day TTL policy on
+`readings.expires_at` (declared in `firestore.indexes.json`). A TTL policy can
+take up to 24 hours to become active and deletes lazily, typically within a
+day of expiry. To verify:
 
-Contributing
+```bash
+gcloud firestore fields ttls list --collection-group=readings --project=mv-pollution-tracking-system
+```
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+CI (`.github/workflows/ci-cd.yml`) runs a full-history secret scan, builds
+and tests both packages, and deploys on pushes to `main`.
 
-License
+## PurpleAir API usage
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+The poller requests 13 fields for every sensor in the bounding box every 10
+minutes (4,320 requests per month). PurpleAir charges per request plus per
+sensor per field. With roughly 40 sensors that is about 4.5 million points a
+month. To reduce cost, trim `REQUESTED_FIELDS` or lengthen the schedule in
+`functions/src/purpleair/config.ts` and `poll.ts`.
 
-Support
+## Data dictionary
 
-For support and questions:
-- Check the documentation
-- Review the test scenarios
-- Contact the development team
+All timestamps are Firestore `Timestamp` values unless noted.
 
-Updates & Maintenance
+### `sensors/{sensorIndex}`
 
-Regular Maintenance Tasks
-- Update dependencies
-- Monitor API rate limits
-- Review and update security rules
-- Backup Firestore data
-- Monitor system performance
+Latest snapshot per sensor. Document id is the PurpleAir `sensor_index`.
+Written only by `pollPurpleAir`; public read.
 
-Future Enhancements
-- Advanced RAG with document retrieval
-- Real-time notifications
-- Mobile app development
-- Advanced analytics dashboard
-- Integration with additional data sources
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `source` | string | Data source, `purpleair`. Later stages add `airnow`, `smellpgh`, etc. |
+| `source_id` | string | Id within the source (PurpleAir `sensor_index`). |
+| `name` | string | Sensor name as registered with PurpleAir. |
+| `lat`, `lng` | number | Location in decimal degrees. |
+| `location_type` | number or null | PurpleAir: 0 outdoor, 1 indoor. |
+| `pollutant` | string | `pm25`. |
+| `units` | string | `ug/m3`. |
+| `raw` | map | Unmodified PurpleAir fields: `pm25_cf_1`, `pm25_atm`, `pm25_10minute`, `pm25_60minute`, `pm25_24hour`, `humidity`, `temperature`, `confidence`, `last_seen` (Unix seconds). |
+| `pm25_corrected` | number or null | `max(0, 0.524 * pm25_cf_1 - 0.0862 * humidity + 5.75)`, one decimal. Null when inputs are missing. |
+| `correction_model` | string | Equation used, currently `barkjohn_2021`. |
+| `aqi` | number or null | US AQI from `pm25_corrected`, 2024 breakpoints. |
+| `aqi_category` | string or null | `Good`, `Moderate`, `Unhealthy for Sensitive Groups`, `Unhealthy`, `Very Unhealthy`, `Hazardous`. |
+| `excluded` | boolean | True if the sensor must not count toward public averages. |
+| `exclude_reason` | string or null | Comma-joined reasons: `low_confidence` (< 70), `indoor`, `stale` (> 2 h), `missing_data`. |
+| `last_seen_at` | Timestamp or null | Sensor's own last report time. |
+| `updated_at` | Timestamp | Time of the poll that wrote this snapshot. |
 
----
+### `sensors/{sensorIndex}/readings/{isoTimestamp}`
 
-**Built with ❤️ By The Liberate X Team for VAlley Clean Air Now(VCAN) to serve the Mon Valley community** 
-=======
-# The-Mon-Valley-Pollution-Tracking-System
- Pollution Tracking System for The Mon Valley Area 
->>>>>>> 682b90e0319de37a8f55f9ca3fdf80890771b63b
+One document per sensor per poll. Document id is the poll time in ISO-8601.
+Retained 30 days via a TTL policy on `expires_at`.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `source`, `pollutant`, `units` | string | As above. |
+| `pm25_cf_1`, `pm25_atm`, `humidity`, `temperature`, `confidence` | number or null | Raw values at poll time. |
+| `pm25_corrected`, `correction_model`, `aqi`, `aqi_category` | see above | Derived values at poll time. |
+| `excluded`, `exclude_reason` | see above | Exclusion status at poll time. |
+| `observed_at` | Timestamp or null | Sensor `last_seen`. |
+| `polled_at` | Timestamp | Poll time. |
+| `expires_at` | Timestamp | `polled_at` + 30 days. TTL field. |
+
+### `meta/purpleair_poll`
+
+Status of the most recent poll. Public read.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `last_run_at` | Timestamp | Start of the most recent run. |
+| `last_success_at` | Timestamp | Most recent run that wrote data. |
+| `last_error`, `last_error_at` | string, Timestamp | Present after a failed run. |
+| `fetched`, `included`, `excluded` | number | Row counts from the last run. |
+| `data_time_stamp` | number or null | PurpleAir's server data timestamp (Unix seconds). |
+
+### Legacy collections
+
+`symptomReports`, `users`, `healthAssessments` predate Stage 1 and are being
+replaced. Their rules remain in `firestore.rules` until the reports work item
+migrates them.
+
+## Repository layout
+
+```
+frontend/            React app (Create React App)
+  src/components/    SensorMap, Dashboard, SymptomReportForm, BreatheAI
+  src/hooks/         useSensors (Firestore onSnapshot)
+  src/lib/aqi.ts     Client AQI helpers (mirror of functions/src/lib/aqi.ts)
+functions/           Cloud Functions
+  src/purpleair/     Poller: config, client (backoff), transform, poll
+  src/lib/           AQI and EPA correction
+  test/              Jest unit tests
+firestore.rules      Security rules
+firestore.indexes.json  Indexes and the readings TTL policy
+docs/                Planning and protocol documents
+rag_ingest/          Offline scripts that build the BreatheAI knowledge base
+```
+
+## License
+
+MIT.

@@ -1,11 +1,12 @@
 /**
  * Cloud Functions for Mon Valley Pollution Tracking System
  *
- * - processSensorData: Firestore trigger for new sensor readings
- * - submitSymptomReport: HTTPS endpoint for user health reports
- * - scheduledFirestoreBackup: Scheduled Firestore backup (disaster recovery)
- *
- * See master plan for full specs and documentation standards.
+ * - pollPurpleAir: scheduled PurpleAir poller (every 10 minutes) that applies
+ *   the EPA correction and AQI and writes to Firestore. See src/purpleair/.
+ * - llama3Chat: BreatheAI chat proxy (Together AI, key via defineSecret)
+ * - healthCheck, getMetrics: status endpoints used by the BreatheAI UI
+ * - processSensorData, submitSymptomReport: legacy stubs kept for
+ *   compatibility, slated for removal in the Stage 1 cleanup work item.
  */
 
 import * as admin from "firebase-admin";
@@ -17,6 +18,8 @@ import axios from 'axios';
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
+
+export { pollPurpleAir } from './purpleair/poll';
 
 // CORS handler
 const corsHandler = cors({ origin: true });

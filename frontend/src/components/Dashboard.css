@@ -1,0 +1,98 @@
+.dashboard {
+  padding: 16px;
+  max-width: 1000px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.dashboard h2 {
+  color: #1976d2;
+  margin: 0 0 4px;
+}
+
+.dashboard__meta {
+  color: #555;
+  margin: 0 0 16px;
+  font-size: 0.95rem;
+}
+
+.dashboard__error {
+  color: #b71c1c;
+  background: #ffebee;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.dashboard__headline {
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.dashboard__headline-label {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.dashboard__headline-value {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.dashboard__headline-category {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.dashboard__headline-advice {
+  font-size: 1rem;
+  max-width: 60ch;
+}
+
+.dashboard__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.dashboard .card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.card__label {
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.card__value {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #1976d2;
+}
+
+.card__unit {
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.dashboard__panel {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px;
+  border: 1px solid #e0e0e0;
+}
+
+.dashboard__panel h4 {
+  margin: 0 0 8px;
+  color: #1976d2;
+}

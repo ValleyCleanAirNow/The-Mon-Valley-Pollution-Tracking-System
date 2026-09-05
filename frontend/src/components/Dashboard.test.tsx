@@ -3,16 +3,13 @@ import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Dashboard from './Dashboard';
 
-describe('Dashboard', () => {
-  it('renders dashboard component with error handling', () => {
-    render(<Dashboard />);
-    // The component should handle Firebase errors gracefully
-    expect(screen.getByText(/Error:/)).toBeInTheDocument();
-  });
+jest.mock('../firebase', () => ({ db: {}, auth: {} }));
 
-  it('renders dashboard title', () => {
+describe('Dashboard', () => {
+  it('renders the headline and legend without sensor data', () => {
     render(<Dashboard />);
-    // Even with errors, the component structure should be present
-    expect(screen.getByText(/Error:/)).toBeInTheDocument();
+    expect(screen.getByText('Community Health Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('No data')).toBeInTheDocument();
+    expect(screen.getByLabelText('AQI legend')).toBeInTheDocument();
   });
-}); 
+});

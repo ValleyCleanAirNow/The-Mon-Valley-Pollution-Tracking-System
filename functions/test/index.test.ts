@@ -1,27 +1,12 @@
-describe('Cloud Functions', () => {
-  it('should have processSensorData function exported', () => {
-    // Import the functions module
-    const functions = require('../src/index');
-    expect(functions.processSensorData).toBeDefined();
+describe('Cloud Functions exports', () => {
+  const functions = require('../src/index');
+
+  it('exports the scheduled PurpleAir poller', () => {
+    expect(functions.pollPurpleAir).toBeDefined();
   });
 
-  it('should have submitSymptomReport function exported', () => {
-    const functions = require('../src/index');
-    expect(functions.submitSymptomReport).toBeDefined();
+  it('exports the BreatheAI chat proxy and health check', () => {
+    expect(functions.llama3Chat).toBeDefined();
+    expect(functions.healthCheck).toBeDefined();
   });
-
-  it('should have scheduledFirestoreBackup function exported', () => {
-    const functions = require('../src/index');
-    expect(functions.scheduledFirestoreBackup).toBeDefined();
-  });
-
-  it('should have fetchPurpleAirSensorData function exported', () => {
-    const functions = require('../src/index');
-    expect(functions.fetchPurpleAirSensorData).toBeDefined();
-  });
-
-  it('should have fetchNASASatelliteData function exported', () => {
-    const functions = require('../src/index');
-    expect(functions.fetchNASASatelliteData).toBeDefined();
-  });
-}); 
+});
