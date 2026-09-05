@@ -9,7 +9,6 @@ type View = 'dashboard' | 'map' | 'symptoms' | 'ai';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
-  const [language, setLanguage] = useState<'en' | 'es'>('en');
 
   const renderView = () => {
     switch (currentView) {
@@ -27,26 +26,10 @@ function App() {
   };
 
   return (
-    <div className="App" lang={language}>
+    <div className="App" lang="en">
       <header className="App-header">
         <div className="header-content">
           <h1 className="App-title">Mon Valley Pollution Tracking System</h1>
-          <div className="header-controls">
-            <div className="language-selector">
-              <label htmlFor="language-select" className="sr-only">
-                Language
-              </label>
-              <select
-                id="language-select"
-                value={language}
-                onChange={(e) => setLanguage(e.target.value as 'en' | 'es')}
-                aria-label="Language"
-              >
-                <option value="en">English</option>
-                <option value="es">Español</option>
-              </select>
-            </div>
-          </div>
         </div>
         <nav className="App-nav" role="navigation" aria-label="Main navigation">
           <button

@@ -16,7 +16,7 @@
 
 .header-content {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   margin-bottom: 20px;
   flex-wrap: wrap;
@@ -28,40 +28,6 @@
   font-size: 2rem;
   font-weight: 700;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.header-controls {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.language-selector select {
-  padding: 8px 12px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-}
-
-.language-selector select:hover {
-  border-color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.language-selector select:focus {
-  outline: none;
-  border-color: #fff;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
-}
-
-.language-selector option {
-  background: #333;
-  color: white;
 }
 
 .App-nav {
@@ -207,8 +173,7 @@
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   .nav-button,
-  .success-message,
-  .language-selector select {
+  .success-message {
     transition: none;
     animation: none;
   }
