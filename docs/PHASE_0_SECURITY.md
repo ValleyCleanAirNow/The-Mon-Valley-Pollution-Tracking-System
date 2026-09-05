@@ -27,3 +27,5 @@ Removing a value from the current tree does not remove it from Git history. Befo
 ## Local verification
 
 From `functions/`, run `npm ci --ignore-scripts` and `npm run build`. From the repository root, run a current-tree gitleaks scan and, after the approved rewrite, a full-history scan. A clean result must contain zero findings under both the default rules and the repository’s AQS rule.
+
+The post-rewrite test baseline contains eight Functions tests: five pass and three pre-existing export expectations fail because `scheduledFirestoreBackup`, `fetchPurpleAirSensorData`, and `fetchNASASatelliteData` are not implemented in the baseline source. Those functions belong to the approved Phase 1 backend scope. Phase 0 does not add empty security-sensitive stubs merely to satisfy stale tests; the required Phase 0 acceptance gates are the zero-finding current-tree and full-history scans plus a passing Functions build.
