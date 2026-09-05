@@ -10,13 +10,6 @@ interface Message {
   type: 'text' | 'question' | 'suggestion' | 'alert';
 }
 
-interface AIState {
-  currentStep: 'greeting' | 'symptom_assessment' | 'severity_check' | 'recommendations' | 'complete';
-  symptoms: string[];
-  severity: number;
-  context: string;
-}
-
 const BreatheAI: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -27,13 +20,6 @@ const BreatheAI: React.FC = () => {
       type: 'text'
     }
   ]);
-  
-  const [aiState, setAIState] = useState<AIState>({
-    currentStep: 'greeting',
-    symptoms: [],
-    severity: 0,
-    context: ''
-  });
   
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -212,4 +198,4 @@ const BreatheAI: React.FC = () => {
   );
 };
 
-export default BreatheAI; 
+export default BreatheAI;

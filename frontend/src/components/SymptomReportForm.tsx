@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './SymptomReportForm.css';
 import { getAuth } from 'firebase/auth';
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../firebase';
 
 interface OSAC {
   onset: string;
@@ -315,4 +313,4 @@ const SymptomReportForm: React.FC<SymptomReportFormProps> = ({ onSuccess }) => {
   );
 };
 
-export default SymptomReportForm; 
+export default SymptomReportForm;
