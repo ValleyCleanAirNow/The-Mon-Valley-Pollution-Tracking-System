@@ -13,7 +13,8 @@
 #
 # Non-interactive mode (CI, or an agent session) reads:
 #   GOOGLE_APPLICATION_CREDENTIALS       path to a service account key, or
-#   GOOGLE_APPLICATION_CREDENTIALS_JSON  the key's JSON content
+#   GOOGLE_APPLICATION_CREDENTIALS_JSON  the key's JSON content, or
+#   GOOGLE_APPLICATION_CREDENTIALS_B64   the key file base64-encoded on one line
 #   PURPLEAIR_API_KEY, TOGETHER_API_KEY, SENDGRID_API_KEY,
 #   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
 #                                        secret values (unset ones default to "unused",
@@ -37,12 +38,23 @@ for arg in "$@"; do
   esac
 done
 
-# Service account handed over as JSON content: materialise it for the CLIs.
-if [[ -n "${GOOGLE_APPLICATION_CREDENTIALS_JSON:-}" && -z "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]]; then
-  CRED_FILE="$(mktemp)"
-  trap 'rm -f "$CRED_FILE"' EXIT
-  printf '%s' "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > "$CRED_FILE"
-  export GOOGLE_APPLICATION_CREDENTIALS="$CRED_FILE"
+# Service account handed over as content: materialise it for the CLIs.
+if [[ -z "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]]; then
+  if [[ -n "${GOOGLE_APPLICATION_CREDENTIALS_B64:-}" ]]; then
+    CRED_FILE="$(mktemp)"
+    trap 'rm -f "$CRED_FILE"' EXIT
+    printf '%s' "$GOOGLE_APPLICATION_CREDENTIALS_B64" | tr -d '\n\r ' | base64 -d > "$CRED_FILE"
+    export GOOGLE_APPLICATION_CREDENTIALS="$CRED_FILE"
+  elif [[ -n "${GOOGLE_APPLICATION_CREDENTIALS_JSON:-}" ]]; then
+    CRED_FILE="$(mktemp)"
+    trap 'rm -f "$CRED_FILE"' EXIT
+    printf '%s' "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > "$CRED_FILE"
+    export GOOGLE_APPLICATION_CREDENTIALS="$CRED_FILE"
+  fi
+  if [[ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]]; then
+    node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$GOOGLE_APPLICATION_CREDENTIALS" \
+      || { echo "The service account credential is not valid JSON. Check the environment variable." >&2; exit 1; }
+  fi
 fi
 
 bold() { printf '\n\033[1m%s\033[0m\n' "$*"; }

@@ -159,7 +159,7 @@ It also runs unattended. Give it a service account key and the secret
 values through the environment and pass `--yes`:
 
 ```bash
-export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json   # or GOOGLE_APPLICATION_CREDENTIALS_JSON='{...}'
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json   # or GOOGLE_APPLICATION_CREDENTIALS_B64=$(base64 < key.json | tr -d '\n')
 export PURPLEAIR_API_KEY=...  FIREBASE_WEB_API_KEY=...
 scripts/go-live.sh --yes --delete-legacy
 ```
