@@ -88,7 +88,7 @@ then `firebase deploy --only functions`.
 
 | Setting | File | Default |
 | --- | --- | --- |
-| Bounding box | `functions/src/purpleair/config.ts` `BOUNDING_BOX` | nw 40.425, -79.95; se 40.255, -79.795 (the three mills plus all 16 centroids) |
+| Bounding box | `functions/src/purpleair/config.ts` `BOUNDING_BOX` | nw 40.425, -79.95; se 40.255, -79.79 (the three mills plus all 16 centroids) |
 | Prune sensors not refreshed for | `functions/src/purpleair/config.ts` `PRUNE_UNPOLLED_AFTER_MS` | 24 h |
 | Fields requested (cost) | `functions/src/purpleair/config.ts` `REQUESTED_FIELDS` | 13 fields |
 | Exclusion: min confidence | `functions/src/purpleair/config.ts` `EXCLUSION.minConfidence` | 70 |

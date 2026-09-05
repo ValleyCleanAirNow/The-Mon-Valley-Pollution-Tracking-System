@@ -19,7 +19,7 @@ export const BOUNDING_BOX = {
   nwlat: 40.425,
   nwlng: -79.95,
   selat: 40.255,
-  selng: -79.795,
+  selng: -79.79,
 } as const;
 
 /**

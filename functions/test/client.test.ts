@@ -31,7 +31,7 @@ describe('fetchSensors', () => {
     const [url, cfg] = get.mock.calls[0];
     expect(url).toBe('https://api.purpleair.com/v1/sensors');
     expect(cfg.headers['X-API-Key']).toBe('secret');
-    expect(cfg.params).toMatchObject({ nwlat: 40.425, nwlng: -79.95, selat: 40.255, selng: -79.795 });
+    expect(cfg.params).toMatchObject({ nwlat: 40.425, nwlng: -79.95, selat: 40.255, selng: -79.79 });
     expect(cfg.params.fields).toContain('pm2.5_cf_1');
     expect(cfg.params.fields).toContain('humidity');
   });
