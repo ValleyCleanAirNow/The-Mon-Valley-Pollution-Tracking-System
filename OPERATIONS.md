@@ -62,6 +62,22 @@ If `alert_log` shows `failed` with `not configured`, the secret is missing.
 If nothing is ever sent, check that a subscription exists and that the
 municipality's `history` has two consecutive polls at or above the level.
 
+## If the site shows "No data" or "0 of 0 sensors"
+
+Almost always the released Firestore rules are not the repository's. Check
+from any terminal, using the public web API key from `frontend/.env`:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' \
+  "https://firestore.googleapis.com/v1/projects/mv-pollution-tracking-system/databases/(default)/documents/sensors?key=$WEB_KEY&pageSize=1"
+```
+
+`200` means rules are fine and the problem is elsewhere (check
+`meta/purpleair_poll`). `403` means the wrong ruleset is live: run
+`firebase deploy --only firestore:rules` and re-test. A deploy that fails
+partway, for example on a functions build error, can leave rules unreleased
+even though the CLI printed "compiled successfully".
+
 ## Rotate a key
 
 Secrets live in Firebase Secret Manager. They are never in git or in the
