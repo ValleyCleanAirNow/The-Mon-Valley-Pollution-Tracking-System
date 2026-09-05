@@ -15,6 +15,17 @@ qiyam@valleycleanair.com.
 | `llama3Chat`, `healthCheck` | Cloud Functions v2 HTTPS | function logs |
 | Data | Cloud Firestore | Firebase console, Firestore Database |
 
+## Quick status from a terminal
+
+```bash
+gcloud auth application-default login   # once
+node scripts/status.js
+```
+
+Prints the last poll, sensor counts by category, every municipality's
+centroid with how many sensors fall inside its radius, recent alert log
+entries, and how many legacy `symptomReports` documents remain.
+
 ## Check that polling is healthy
 
 1. Firestore, document `meta/purpleair_poll`. `last_success_at` should be
