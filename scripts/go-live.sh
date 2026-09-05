@@ -148,8 +148,25 @@ if [[ "$SKIP_DEPLOY" == false ]]; then
   (cd functions && npm ci --no-audit --no-fund && npm run lint && npm run build)
   (cd frontend && npm ci --no-audit --no-fund && CI=true npm run build)
 
-  bold "4. Deploying rules, indexes (incl. TTL), storage rules, functions"
-  firebase deploy --only firestore:rules,firestore:indexes,storage,functions --project "$PROJECT" --non-interactive --force
+  # Rules first and on their own: a later failure (for example a functions
+  # build error) must never leave an old ruleset released.
+  bold "4a. Deploying Firestore rules, indexes (incl. TTL), storage rules"
+  firebase deploy --only firestore:rules,firestore:indexes,storage --project "$PROJECT" --non-interactive
+
+  bold "4b. Verifying a visitor can read sensor data under the released rules"
+  WEB_KEY="$(grep -E '^REACT_APP_FIREBASE_API_KEY=' frontend/.env | cut -d= -f2-)"
+  code="$(curl -sS -o /dev/null -w '%{http_code}' "https://firestore.googleapis.com/v1/projects/$PROJECT/databases/(default)/documents/sensors?key=$WEB_KEY&pageSize=1")"
+  if [[ "$code" == "200" ]]; then
+    echo "ok: public read of sensors returns 200"
+  else
+    echo "Public read of sensors returned HTTP $code. The released ruleset is wrong; stopping." >&2
+    exit 1
+  fi
+  code="$(curl -sS -o /dev/null -w '%{http_code}' "https://firestore.googleapis.com/v1/projects/$PROJECT/databases/(default)/documents/reports?key=$WEB_KEY&pageSize=1")"
+  [[ "$code" == "403" ]] && echo "ok: anonymous read of reports is denied (403)" || { echo "reports readable anonymously (HTTP $code); stopping." >&2; exit 1; }
+
+  bold "4c. Deploying functions"
+  firebase deploy --only functions --project "$PROJECT" --non-interactive --force
 
   bold "5. Deploying hosting"
   firebase deploy --only hosting --project "$PROJECT" --non-interactive
