@@ -5,6 +5,8 @@
  *   the EPA correction and AQI and writes to Firestore. See src/purpleair/.
  * - aggregateReports: Firestore trigger that maintains hourly per-municipality
  *   aggregates of community reports with small-count suppression.
+ * - onPollComplete: Firestore trigger on meta/purpleair_poll that refreshes
+ *   municipality_status and sends threshold alerts. See src/alerts/.
  * - llama3Chat: BreatheAI chat proxy (Together AI, key via defineSecret)
  * - healthCheck: status endpoint used by the BreatheAI UI
  */
@@ -20,6 +22,7 @@ admin.initializeApp();
 
 export { pollPurpleAir } from './purpleair/poll';
 export { aggregateReports } from './reports/aggregate';
+export { onPollComplete } from './alerts/trigger';
 
 // CORS handler
 const corsHandler = cors({ origin: true });

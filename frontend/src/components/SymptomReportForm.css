@@ -95,6 +95,9 @@
 }
 
 .report-form input[type='datetime-local'],
+.report-form input[type='email'],
+.report-form input[type='tel'],
+.report-form input[type='time'],
 .report-form select,
 .report-form textarea {
   width: 100%;
