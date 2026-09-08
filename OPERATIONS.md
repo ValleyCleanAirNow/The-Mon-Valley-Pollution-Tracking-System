@@ -120,6 +120,9 @@ then `firebase deploy --only functions`.
 | Re-send gap for the same level | `functions/src/alerts/config.ts` `RESEND_AFTER_MS` | 3 h |
 | Alert thresholds offered | `functions/src/alerts/decide.ts` `THRESHOLD_CATEGORY` and `frontend/src/types/alerts.ts` | USG, Unhealthy |
 | Message wording | `functions/src/alerts/messages.ts` | see file |
+| Risk index weights (wind, odor, toxicity, vulnerability) | `RISK_WEIGHTS` in `functions/src/lib/risk.ts` and `frontend/src/lib/risk.ts` (keep identical) | see README |
+| Per-facility toxicity override | `toxicity_weight` field on the `titleVFacilities` document (1.0 to 1.5) | derived from permitted pollutants |
+| Odor window for zones | `SMELL_WINDOW_HOURS` in `functions/src/alerts/facilities.ts` | 3 h |
 | SMS on or off | `SMS_ALERTS_ENABLED` param in `functions/.env` and `REACT_APP_SMS_ALERTS_ENABLED` | off |
 
 Changing the poll frequency or field list changes PurpleAir point usage:
@@ -155,6 +158,21 @@ Risk-zone behaviour (radius, wind station, sector size) is in
 in `wind_station` (default `KAGC`, Allegheny County Airport). If wind is
 unavailable the zone falls back to a circle and `facility_status.wind` is
 null; check function logs for "Wind observation unavailable".
+
+## Add a VCAN distribution site
+
+Add a document to the `vcan_distributions` collection in the console with
+`name`, `lat`, `lng`, and optionally `address`, `municipality`, `what`,
+`date`, `notes`. The map shows it as a ❤️ marker immediately; no deploy.
+
+## Smell PGH
+
+`onPollComplete` pulls the last 24 hours of Smell PGH reports inside the
+PurpleAir bounding box every hour (public API, no key) into
+`smell_reports`, kept 7 days. If the API is down the sync is skipped and
+logged as "Smell PGH sync failed"; the rest of the cycle continues. Odor
+reports inside a facility's zone in the last 3 hours set the zone's
+`Odor_score` in the VCAN Weighted Risk Index (see README).
 
 ## Grant or revoke admin
 

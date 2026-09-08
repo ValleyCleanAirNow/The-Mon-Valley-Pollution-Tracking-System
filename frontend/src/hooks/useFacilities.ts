@@ -55,6 +55,10 @@ export function useFacilities(initial?: { facilities: Facility[]; statuses: Reco
             zone_length_km: data.zone_length_km ?? 2,
             zone_bearing_deg: data.zone_bearing_deg ?? null,
             zone_polygon: Array.isArray(data.zone_polygon) ? data.zone_polygon : [],
+            risk_level: data.risk_level ?? null,
+            risk_score: data.risk_score ?? null,
+            risk_inputs: data.risk_inputs ?? null,
+            smell_reports_in_zone: data.smell_reports_in_zone ?? 0,
             computed_at: toDate(data.computed_at),
           };
         });

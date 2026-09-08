@@ -26,6 +26,7 @@ export interface MunicipalityStatus {
   aqi: number | null;
   aqi_category: AqiCategory | null;
   sensor_count: number;
+  centroid?: { lat: number; lng: number } | null;
   computed_at: Date | null;
 }
 

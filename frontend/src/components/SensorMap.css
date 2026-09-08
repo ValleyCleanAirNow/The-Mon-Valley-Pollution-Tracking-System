@@ -208,3 +208,45 @@
   color: #555;
   font-size: 0.85rem;
 }
+
+.map-legend {
+  margin: 10px 0;
+}
+
+.map-legend summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: #1976d2;
+  padding: 6px 0;
+}
+
+.map-legend section {
+  margin: 8px 0 4px;
+}
+
+.map-legend h4 {
+  margin: 6px 0 4px;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.legend-note {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.legend-hex {
+  width: 16px;
+  height: 14px;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.sensor-map__toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 6px 0;
+}

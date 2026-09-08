@@ -4,10 +4,12 @@ import 'leaflet/dist/leaflet.css';
 import './SensorMap.css';
 import { useSensors } from '../hooks/useSensors';
 import { colorFor, NO_DATA_COLOR, textColorFor } from '../lib/aqi';
-import { AqiLegend } from './AqiLegend';
-import FacilityLayer from './FacilityLayer';
+import MapLegend from './MapLegend';
+import { DistributionLayer, FacilityLayer, SmellLayer } from './OverlayLayers';
 import { useFacilities } from '../hooks/useFacilities';
+import { useDistributions, useSmellReports } from '../hooks/useMapLayers';
 import { describeZone, type Facility, type FacilityStatus } from '../types/facility';
+import type { DistributionSite, SmellReport } from '../types/layers';
 import type { Sensor } from '../types/sensor';
 
 export type { Sensor } from '../types/sensor';
@@ -17,6 +19,8 @@ interface SensorMapProps {
   sensors?: Sensor[];
   /** Optional preloaded facilities (tests). */
   facilityData?: { facilities: Facility[]; statuses: Record<string, FacilityStatus> };
+  smellData?: SmellReport[];
+  distributionData?: DistributionSite[];
   onSensorSelect?: (sensor: Sensor) => void;
 }
 
@@ -79,11 +83,15 @@ const SensorPopup: React.FC<{ sensor: Sensor }> = ({ sensor }) => {
   );
 };
 
-const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, facilityData, onSensorSelect }) => {
+const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, facilityData, smellData, distributionData, onSensorSelect }) => {
   const { sensors, loading, error, lastUpdated } = useSensors(propSensors);
   const { facilities, statuses } = useFacilities(facilityData);
+  const smellReports = useSmellReports(smellData);
+  const distributions = useDistributions(distributionData);
   const [selected, setSelected] = useState<Sensor | null>(null);
   const [showFacilities, setShowFacilities] = useState(true);
+  const [showSmell, setShowSmell] = useState(true);
+  const [showDistribution, setShowDistribution] = useState(true);
 
   const isStale = useMemo(() => {
     if (!lastUpdated) return false;
@@ -112,13 +120,32 @@ const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, facilityDat
       </div>
       {error && <div className="sensor-map__error" role="alert">Could not load sensors: {error}</div>}
 
-      <AqiLegend showFacilities={showFacilities && facilities.length > 0} />
-      {facilities.length > 0 && (
+      <div className="sensor-map__toggles">
+        {facilities.length > 0 && (
+          <label className="sensor-map__toggle">
+            <input type="checkbox" checked={showFacilities} onChange={(e) => setShowFacilities(e.target.checked)} />
+            Facilities and risk zones
+          </label>
+        )}
         <label className="sensor-map__toggle">
-          <input type="checkbox" checked={showFacilities} onChange={(e) => setShowFacilities(e.target.checked)} />
-          Show facilities and risk zones
+          <input type="checkbox" checked={showSmell} onChange={(e) => setShowSmell(e.target.checked)} />
+          Smell PGH reports ({smellReports.length})
         </label>
-      )}
+        {distributions.length > 0 && (
+          <label className="sensor-map__toggle">
+            <input type="checkbox" checked={showDistribution} onChange={(e) => setShowDistribution(e.target.checked)} />
+            VCAN distribution sites
+          </label>
+        )}
+      </div>
+      <MapLegend
+        sections={{
+          smell: showSmell,
+          zones: showFacilities && facilities.length > 0,
+          facilities: showFacilities && facilities.length > 0,
+          distribution: showDistribution && distributions.length > 0,
+        }}
+      />
 
       <MapContainer center={MAP_CENTER} zoom={MAP_ZOOM} className="sensor-map__map" scrollWheelZoom>
         <TileLayer
@@ -126,6 +153,8 @@ const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, facilityDat
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {showFacilities && <FacilityLayer facilities={facilities} statuses={statuses} />}
+        {showSmell && <SmellLayer reports={smellReports} />}
+        {showDistribution && <DistributionLayer sites={distributions} />}
         {sensors.map((sensor) => {
           const color = colorFor(sensor.excluded ? null : sensor.aqi_category);
           return (

@@ -22,6 +22,7 @@ export function useMunicipalityStatus(): { statuses: Record<string, Municipality
             aqi: data.aqi ?? null,
             aqi_category: data.aqi_category ?? null,
             sensor_count: data.sensor_count ?? 0,
+            centroid: data.centroid ?? null,
             computed_at: data.computed_at instanceof Timestamp ? data.computed_at.toDate() : null,
           };
         });

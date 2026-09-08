@@ -164,6 +164,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Smell PGH odor reports synced hourly (public crowdsourced data) and
+    // VCAN air filter / purifier distribution sites (edited in the console).
+    match /smell_reports/{reportId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /vcan_distributions/{siteId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Delivery audit log and per-subscriber send state. Server-only writes;
     // admins may read the log for audits.
     match /alert_log/{entryId} {

@@ -20,7 +20,9 @@ import * as logger from "firebase-functions/logger";
 import { AqiCategory, pm25ToAqi } from "../lib/aqi";
 import { COLLECTIONS as SENSOR_COLLECTIONS } from "../purpleair/config";
 import { CONFIG_COLLECTION, LatLng } from "./config";
-import { haversineKm } from "./geo";
+import { haversineKm, pointInPolygon } from "./geo";
+import type { SmellReport } from "./smellpgh";
+import { computeRisk, RiskLevel, RiskInputs, toxicityWeight, windWeight } from "../lib/risk";
 import type { SensorForStatus } from "./status";
 
 export const FACILITIES_COLLECTION = "titleVFacilities";
@@ -63,7 +65,15 @@ export interface FacilityDoc {
   name: string;
   operator?: string;
   location: LatLng & { city?: string };
+  permittedPollutants?: Array<{ pollutant?: string }>;
+  /** Optional manual override of W_tox (1.0 to 1.5). */
+  toxicity_weight?: number | null;
 }
+
+/** Odor reports rated 3+ inside the zone within this window feed Odor_score. */
+export const SMELL_WINDOW_HOURS = 3;
+export const SMELL_ESCALATION_MIN = 3;
+export const SMELL_ESCALATION_HOURS = SMELL_WINDOW_HOURS;
 
 export interface FacilityStatusDoc {
   facility_id: string;
@@ -83,6 +93,12 @@ export interface FacilityStatusDoc {
   zone_bearing_deg: number | null;
   /** Closed polygon, first point repeated last. */
   zone_polygon: LatLng[];
+  /** VCAN Weighted Risk Index with V_user = 1. */
+  risk_level: RiskLevel | null;
+  risk_score: number | null;
+  risk_inputs: RiskInputs;
+  /** Odor reports inside the zone in the last SMELL_WINDOW_HOURS (any rating). */
+  smell_reports_in_zone: number;
   computed_at: Date;
 }
 
@@ -135,6 +151,7 @@ export function computeFacilityStatus(
   wind: WindObservation | null,
   cfg: FacilityConfig,
   now: Date,
+  smellReports: SmellReport[] = [],
 ): FacilityStatusDoc {
   const loc = { lat: facility.location.lat, lng: facility.location.lng };
   const nearby = sensors.filter(
@@ -147,6 +164,17 @@ export function computeFacilityStatus(
   const length = windy ? plumeLengthKm(wind.speed_kmh, cfg) : cfg.plume_min_km;
   const bearing = windy ? ((wind as WindObservation).from_deg as number + 180) % 360 : null;
   const polygon = windy ? sectorPolygon(loc, bearing as number, cfg.plume_half_angle_deg, length) : circlePolygon(loc, length);
+
+  const cutoff = now.getTime() - SMELL_WINDOW_HOURS * 3600 * 1000;
+  const inZone = smellReports.filter((r) => r.observed_at.getTime() >= cutoff && pointInPolygon({ lat: r.lat, lng: r.lng }, polygon));
+  const odorScore = inZone.length === 0 ? 0 : Math.round((inZone.reduce((a, r) => a + r.smell_value, 0) / inZone.length) * 10) / 10;
+  const risk = computeRisk({
+    pm_cal: mean,
+    w_tox: toxicityWeight(facility.permittedPollutants, facility.toxicity_weight),
+    w_wind: windWeight(wind?.speed_kmh ?? null),
+    odor_score: odorScore,
+    v_user: 1,
+  });
 
   return {
     facility_id: facility.facilityId,
@@ -163,6 +191,10 @@ export function computeFacilityStatus(
     zone_length_km: length,
     zone_bearing_deg: bearing,
     zone_polygon: polygon,
+    risk_level: risk.level,
+    risk_score: risk.score,
+    risk_inputs: { pm_cal: risk.pm_cal, w_tox: risk.w_tox, w_wind: risk.w_wind, odor_score: risk.odor_score, w_odor: risk.w_odor, v_user: risk.v_user },
+    smell_reports_in_zone: inZone.length,
     computed_at: now,
   };
 }
@@ -211,7 +243,7 @@ export async function loadFacilityConfig(db: admin.firestore.Firestore): Promise
 export async function updateFacilityStatuses(
   db: admin.firestore.Firestore,
   now: Date = new Date(),
-  deps: { http?: AxiosInstance; sensors?: SensorForStatus[] } = {},
+  deps: { http?: AxiosInstance; sensors?: SensorForStatus[]; smellReports?: SmellReport[] } = {},
 ): Promise<FacilityStatusDoc[]> {
   const cfg = await loadFacilityConfig(db);
   const facSnap = await db.collection(FACILITIES_COLLECTION).get();
@@ -233,7 +265,10 @@ export async function updateFacilityStatuses(
   const batch = db.batch();
   const out: FacilityStatusDoc[] = [];
   for (const f of facilities) {
-    const doc = computeFacilityStatus({ facilityId: f.facilityId, name: f.name ?? f.facilityId, operator: f.operator, location: f.location }, sensors, wind, cfg, now);
+    const doc = computeFacilityStatus(
+      { facilityId: f.facilityId, name: f.name ?? f.facilityId, operator: f.operator, location: f.location, permittedPollutants: f.permittedPollutants, toxicity_weight: f.toxicity_weight },
+      sensors, wind, cfg, now, deps.smellReports ?? [],
+    );
     batch.set(db.collection(FACILITY_STATUS_COLLECTION).doc(f.facilityId), doc);
     out.push(doc);
   }
