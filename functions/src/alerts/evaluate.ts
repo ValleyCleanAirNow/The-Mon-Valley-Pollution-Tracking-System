@@ -10,6 +10,7 @@ import { AlertState, Decision, QuietHours, ThresholdLevel, decide, nextState } f
 import { Channel, DeliveryResult, Providers, sendEmail, sendPush, sendSms } from "./deliver";
 import { composeAlert, composeImproving } from "./messages";
 import { MunicipalityStatusDoc, StatusHistoryEntry, updateMunicipalityStatuses } from "./status";
+import { updateFacilityStatuses } from "./facilities";
 
 export interface SubscriptionDoc {
   municipalities: string[];
@@ -77,6 +78,14 @@ export async function evaluateAlerts(
   const summary: EvaluationSummary = { statuses: 0, subscriptions: 0, decisions: [], sends: 0, failures: 0 };
   const statuses = precomputed ?? (await updateMunicipalityStatuses(db, now));
   summary.statuses = statuses.length;
+  if (!precomputed) {
+    try {
+      const facilities = await updateFacilityStatuses(db, now);
+      logger.info("Facility status updated", { facilities: facilities.length });
+    } catch (err) {
+      logger.error("Facility status update failed", { error: err instanceof Error ? err.message : String(err) });
+    }
+  }
   const byMunicipality = new Map(statuses.map((s) => [s.municipality, s]));
 
   const subs = await db.collection(COLLECTIONS.subscriptions).get();

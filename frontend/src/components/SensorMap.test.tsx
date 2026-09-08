@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import userEvent from '@testing-library/user-event';
 import SensorMap from './SensorMap';
 import type { Sensor } from '../types/sensor';
 
@@ -8,7 +9,10 @@ import type { Sensor } from '../types/sensor';
 jest.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="map">{children}</div>,
   TileLayer: () => null,
-  CircleMarker: ({ children }: { children: React.ReactNode }) => <div data-testid="marker">{children}</div>,
+  CircleMarker: ({ children, interactive }: { children?: React.ReactNode; interactive?: boolean }) =>
+    interactive === false ? <div data-testid="ring" /> : <div data-testid="marker">{children}</div>,
+  Marker: ({ children }: { children: React.ReactNode }) => <div data-testid="facility">{children}</div>,
+  Polygon: () => <div data-testid="zone" />,
   Popup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
@@ -54,5 +58,36 @@ describe('SensorMap', () => {
     render(<SensorMap sensors={mockSensors} />);
     expect(screen.getByText('Sensor list (2)')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Clairton Center' })).toBeInTheDocument();
+  });
+});
+
+describe('SensorMap facilities', () => {
+  const facilityData = {
+    facilities: [
+      { id: 'PA-CLAIRTON-001', facilityId: 'PA-CLAIRTON-001', name: 'U.S. Steel Clairton Coke Works', operator: 'U.S. Steel', location: { lat: 40.2925, lng: -79.8814 }, permitId: 'TV-04-00001', permitType: 'Title V Operating Permit' },
+    ],
+    statuses: {
+      'PA-CLAIRTON-001': {
+        facility_id: 'PA-CLAIRTON-001', name: 'U.S. Steel Clairton Coke Works', location: { lat: 40.2925, lng: -79.8814 }, radius_km: 3,
+        pm25_corrected: 41, aqi: 115, aqi_category: 'Unhealthy for Sensitive Groups' as const, sensor_count: 2,
+        wind: { from_deg: 270, speed_kmh: 20, observed_at: null, station: 'KAGC' }, zone_shape: 'sector' as const, zone_length_km: 4, zone_bearing_deg: 90,
+        zone_polygon: [{ lat: 40.29, lng: -79.88 }, { lat: 40.31, lng: -79.84 }, { lat: 40.28, lng: -79.84 }, { lat: 40.29, lng: -79.88 }], computed_at: null,
+      },
+    },
+  };
+  it('draws a facility marker, its risk zone, and the legend entries', () => {
+    render(<SensorMap sensors={mockSensors} facilityData={facilityData} />);
+    expect(screen.getByTestId('facility')).toBeInTheDocument();
+    expect(screen.getByTestId('zone')).toBeInTheDocument();
+    expect(screen.getByText('Title V facility')).toBeInTheDocument();
+    expect(screen.getByText(/Risk zone: downwind of a plant/)).toBeInTheDocument();
+    expect(screen.getByText(/Nearby air: Unhealthy for Sensitive Groups/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Wind from the W at 20 km\/h/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Facilities right now/)).toBeInTheDocument();
+  });
+  it('hides the layer when toggled off', async () => {
+    render(<SensorMap sensors={mockSensors} facilityData={facilityData} />);
+    await userEvent.setup().click(screen.getByLabelText('Show facilities and risk zones'));
+    expect(screen.queryByTestId('zone')).not.toBeInTheDocument();
   });
 });

@@ -5,6 +5,9 @@ import './SensorMap.css';
 import { useSensors } from '../hooks/useSensors';
 import { colorFor, NO_DATA_COLOR, textColorFor } from '../lib/aqi';
 import { AqiLegend } from './AqiLegend';
+import FacilityLayer from './FacilityLayer';
+import { useFacilities } from '../hooks/useFacilities';
+import { describeZone, type Facility, type FacilityStatus } from '../types/facility';
 import type { Sensor } from '../types/sensor';
 
 export type { Sensor } from '../types/sensor';
@@ -12,6 +15,8 @@ export type { Sensor } from '../types/sensor';
 interface SensorMapProps {
   /** Optional preloaded sensors. When provided, Firestore is not queried. */
   sensors?: Sensor[];
+  /** Optional preloaded facilities (tests). */
+  facilityData?: { facilities: Facility[]; statuses: Record<string, FacilityStatus> };
   onSensorSelect?: (sensor: Sensor) => void;
 }
 
@@ -74,9 +79,11 @@ const SensorPopup: React.FC<{ sensor: Sensor }> = ({ sensor }) => {
   );
 };
 
-const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, onSensorSelect }) => {
+const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, facilityData, onSensorSelect }) => {
   const { sensors, loading, error, lastUpdated } = useSensors(propSensors);
+  const { facilities, statuses } = useFacilities(facilityData);
   const [selected, setSelected] = useState<Sensor | null>(null);
+  const [showFacilities, setShowFacilities] = useState(true);
 
   const isStale = useMemo(() => {
     if (!lastUpdated) return false;
@@ -105,13 +112,20 @@ const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, onSensorSel
       </div>
       {error && <div className="sensor-map__error" role="alert">Could not load sensors: {error}</div>}
 
-      <AqiLegend />
+      <AqiLegend showFacilities={showFacilities && facilities.length > 0} />
+      {facilities.length > 0 && (
+        <label className="sensor-map__toggle">
+          <input type="checkbox" checked={showFacilities} onChange={(e) => setShowFacilities(e.target.checked)} />
+          Show facilities and risk zones
+        </label>
+      )}
 
       <MapContainer center={MAP_CENTER} zoom={MAP_ZOOM} className="sensor-map__map" scrollWheelZoom>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {showFacilities && <FacilityLayer facilities={facilities} statuses={statuses} />}
         {sensors.map((sensor) => {
           const color = colorFor(sensor.excluded ? null : sensor.aqi_category);
           return (
@@ -135,6 +149,28 @@ const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, onSensorSel
           );
         })}
       </MapContainer>
+
+      {facilities.length > 0 && (
+        <section className="sensor-map__facilities" aria-label="Facilities">
+          <h3 style={{ color: '#1976d2', margin: '12px 0 6px' }}>Facilities right now</h3>
+          <ul className="facility-list">
+            {facilities.map((f) => {
+              const s = statuses[f.facilityId] ?? statuses[f.id];
+              return (
+                <li key={f.id}>
+                  <span className="facility-list__name">🏭 {f.name}</span>
+                  <span
+                    className="aqi-legend__swatch"
+                    style={{ background: colorFor(s?.aqi_category ?? null), width: 18, height: 18 }}
+                    aria-label={s?.aqi_category ?? 'no data'}
+                  />
+                  <span className="facility-list__desc">{s ? describeZone(s) : 'Status not computed yet.'}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <details className="sensor-map__list">
         <summary>Sensor list ({sensors.length})</summary>

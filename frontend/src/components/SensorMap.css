@@ -134,3 +134,77 @@
     height: 55vh;
   }
 }
+
+.facility-icon {
+  font-size: 24px;
+  line-height: 30px;
+  text-align: center;
+  background: #fff;
+  border-radius: 50%;
+  border: 2px solid #333;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.facility-popup__muted {
+  color: #666;
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.facility-popup__violation {
+  color: #b71c1c;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
+.aqi-legend__facility {
+  font-size: 14px;
+  line-height: 14px;
+}
+
+.aqi-legend__zone {
+  width: 18px;
+  height: 12px;
+  border: 2px solid #ff7e00;
+  background: rgba(255, 126, 0, 0.18);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.sensor-map__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.facility-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.facility-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.facility-list__name {
+  font-weight: 600;
+}
+
+.facility-list__desc {
+  flex-basis: 100%;
+  color: #555;
+  font-size: 0.85rem;
+}
