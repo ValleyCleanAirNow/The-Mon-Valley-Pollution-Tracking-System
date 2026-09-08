@@ -146,8 +146,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Municipality centroids and radius. Public read; edit in the console.
+    // Municipality centroids, facility zone settings. Public read; edit in the console.
     match /config/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Title V facilities (public regulatory data) and their hourly risk-zone
+    // status computed by onPollComplete. Edit facilities in the console.
+    match /titleVFacilities/{facilityId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /facility_status/{facilityId} {
       allow read: if true;
       allow write: if false;
     }

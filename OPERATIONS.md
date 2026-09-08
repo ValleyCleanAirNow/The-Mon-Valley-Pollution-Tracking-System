@@ -140,6 +140,22 @@ Then `cd rules-tests && npm test` to confirm the rules still pass, and
 `firebase deploy --only firestore:rules,functions` followed by a hosting
 deploy.
 
+## Add or edit a facility
+
+Facilities live in the Firestore collection `titleVFacilities`, one document
+per plant, id like `PA-CLAIRTON-001`. Required fields: `facilityId` (same as
+the id), `name`, `location.lat`, `location.lng`. Optional: `operator`,
+`permitId`, `permitType`, `expirationDate`, `permittedPollutants` (array of
+`{pollutant, limit, unit}`), `violations` (array of `{date, description,
+status}`). Add the document in the console; the next hourly poll computes
+its status and the map shows it. No deploy needed.
+
+Risk-zone behaviour (radius, wind station, sector size) is in
+`config/facilities`. Wind comes from the National Weather Service station
+in `wind_station` (default `KAGC`, Allegheny County Airport). If wind is
+unavailable the zone falls back to a circle and `facility_status.wind` is
+null; check function logs for "Wind observation unavailable".
+
 ## Grant or revoke admin
 
 Admins can read all `reports` and the legacy `symptomReports`. Set the

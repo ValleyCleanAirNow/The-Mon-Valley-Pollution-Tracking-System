@@ -18,6 +18,11 @@ Contact: Qiyam Ansari, Executive Director, VCAN, qiyam@valleycleanair.com
   Cause form. Reports are pseudonymous (Firebase Anonymous Auth), readable
   only by their author, and published only as hourly per-municipality
   aggregates once three or more people report in the same hour.
+- **Facilities and risk zones.** The three U.S. Steel Mon Valley Works
+  plants (Clairton Coke Works, Irvin Plant, Edgar Thomson) from the
+  `titleVFacilities` collection, each with a risk zone: the area downwind of
+  the plant right now, shaped by National Weather Service wind and coloured
+  by the measured air quality of sensors within 3 km.
 - **Threshold alerts.** Residents pick municipalities, a level (Unhealthy for
   Sensitive Groups, or Unhealthy), and channels (device notification, email,
   optional SMS). Alerts fire after two consecutive hourly polls at or above the level
@@ -328,6 +333,44 @@ console; no deploy needed. Public read.
 | --- | --- | --- |
 | `centroids` | map | Municipality name to `{lat, lng}`. |
 | `radius_km` | number | Radius for sensor averaging. |
+
+### `titleVFacilities/{facilityId}`
+
+Public regulatory data for Title V permit holders. Edited in the console
+(or by a future import). Public read, no client writes. Fields used by the
+app: `facilityId`, `name`, `operator`, `location.{lat,lng,address,city}`,
+`permitId`, `permitType`, `expirationDate`, `permittedPollutants[]`,
+`violations[]`. Other fields (`emissionsData`, `processes`, `naicsCode`,
+`lastInspection`, `regulatoryAgency`) are kept as-is.
+
+### `facility_status/{facilityId}`
+
+Recomputed by `onPollComplete` after every successful poll. Public read.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `facility_id`, `name`, `location` | string, string, map | From the facility document. |
+| `radius_km` | number | Sensor search radius around the plant (default 3). |
+| `pm25_corrected`, `aqi`, `aqi_category` | number/string or null | Mean of non-excluded sensors within the radius. |
+| `sensor_count`, `sensor_ids` | number, string[] | Sensors that contributed. |
+| `wind` | map or null | `{from_deg, speed_kmh, observed_at, station}` from the National Weather Service; null when unavailable. |
+| `zone_shape` | string | `sector` when wind is at or above `calm_below_kmh`, else `circle`. |
+| `zone_length_km` | number | Sector length (2 to 6 km, scaled by wind speed) or circle radius. |
+| `zone_bearing_deg` | number or null | Direction the sector points toward (downwind). |
+| `zone_polygon` | `{lat,lng}[]` | Closed polygon the map draws. |
+| `computed_at` | Timestamp | Poll time. |
+
+### `config/facilities`
+
+Seeded on first run. Edit in the console; no deploy needed.
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `radius_km` | 3 | Sensor radius around each plant. |
+| `wind_station` | `KAGC` | NWS station (Allegheny County Airport, West Mifflin). |
+| `plume_half_angle_deg` | 30 | Half-width of the downwind sector. |
+| `plume_min_km`, `plume_max_km` | 2, 6 | Sector length at calm and at 30 km/h or more. |
+| `calm_below_kmh` | 5 | Below this wind speed the zone is a circle. |
 
 ### `alert_subscriptions/{uid}`
 
