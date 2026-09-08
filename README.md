@@ -386,7 +386,7 @@ Risk = [(PM_cal × W_tox × W_wind) + (Odor_score × W_odor)] × V_user
 | Term | Meaning | Default |
 | --- | --- | --- |
 | `PM_cal` | Barkjohn-corrected PM2.5, mean of nearby sensors | measured |
-| `W_tox` | Toxicity weight of the nearby facility: 1 + 0.1 per permitted non-PM pollutant, capped 1.5; fades to 1 over 5 km; overridable per facility with `toxicity_weight` | Clairton 1.3, Edgar Thomson 1.2, Irvin 1.1 |
+| `W_tox` | Toxicity weight of the nearby facility: 1 + 0.1 per permitted non-PM pollutant, capped 1.5; fades to 1 over 5 km; overridable per facility with `toxicity_weight` | Clairton 1.3, Edgar Thomson 1.1, Irvin 1.1 |
 | `W_wind` | Dispersion: `clamp(1.3 − 0.03 × wind km/h, 0.7, 1.3)`; stagnant air raises risk | from NWS |
 | `Odor_score` | Mean Smell PGH rating (1 to 5) of reports in the zone in the last 3 h, 0 if none | measured |
 | `W_odor` | PM-equivalent units per odor point | 4 |
