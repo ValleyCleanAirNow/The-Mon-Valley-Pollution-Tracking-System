@@ -20,9 +20,17 @@ Contact: Qiyam Ansari, Executive Director, VCAN, qiyam@valleycleanair.com
   aggregates once three or more people report in the same hour.
 - **Facilities and risk zones.** The three U.S. Steel Mon Valley Works
   plants (Clairton Coke Works, Irvin Plant, Edgar Thomson) from the
-  `titleVFacilities` collection, each with a risk zone: the area downwind of
-  the plant right now, shaped by National Weather Service wind and coloured
-  by the measured air quality of sensors within 3 km.
+  `titleVFacilities` collection, each with a hexagon risk zone: the area
+  downwind of the plant right now, shaped by National Weather Service wind,
+  rated Elevated, High, Severe or Toxic from the measured air quality of
+  sensors within 3 km and raised a step by clusters of strong odor reports.
+- **Smell PGH reports.** Crowdsourced odor reports from CMU CREATE Lab's
+  Smell PGH, synced hourly for the Mon Valley box and shown for 24 hours.
+- **My Risk.** A personal exposure reading from the VCAN Weighted Risk
+  Index: pick a municipality and tick health factors, which stay on the
+  device. Explains the formula in plain language.
+- **VCAN distribution sites.** Where VCAN has handed out air filters and
+  purifiers, from the `vcan_distributions` collection.
 - **Threshold alerts.** Residents pick municipalities, a level (Unhealthy for
   Sensitive Groups, or Unhealthy), and channels (device notification, email,
   optional SMS). Alerts fire after two consecutive hourly polls at or above the level
@@ -357,8 +365,76 @@ Recomputed by `onPollComplete` after every successful poll. Public read.
 | `zone_shape` | string | `sector` when wind is at or above `calm_below_kmh`, else `circle`. |
 | `zone_length_km` | number | Sector length (2 to 6 km, scaled by wind speed) or circle radius. |
 | `zone_bearing_deg` | number or null | Direction the sector points toward (downwind). |
-| `zone_polygon` | `{lat,lng}[]` | Closed polygon the map draws. |
+| `zone_polygon` | `{lat,lng}[]` | Closed polygon the map tessellates into hexagons. |
+| `risk_level` | string or null | `low`, `elevated`, `high`, `severe`, `toxic` from the VCAN Weighted Risk Index below, with `V_user` = 1. |
+| `risk_score` | number or null | The index value, in PM2.5-equivalent µg/m³. |
+| `risk_inputs` | map | `{pm_cal, w_tox, w_wind, odor_score, w_odor, v_user}` used for the score. |
+| `smell_reports_in_zone` | number | Odor reports inside the zone in the last 3 hours (they set `odor_score`). |
 | `computed_at` | Timestamp | Poll time. |
+
+### VCAN Weighted Risk Index
+
+Used for facility risk zones (public map, `V_user` = 1) and the "My Risk"
+screen (personal, `V_user` from health factors kept on the device).
+Implemented identically in `functions/src/lib/risk.ts` and
+`frontend/src/lib/risk.ts`.
+
+```
+Risk = [(PM_cal × W_tox × W_wind) + (Odor_score × W_odor)] × V_user
+```
+
+| Term | Meaning | Default |
+| --- | --- | --- |
+| `PM_cal` | Barkjohn-corrected PM2.5, mean of nearby sensors | measured |
+| `W_tox` | Toxicity weight of the nearby facility: 1 + 0.1 per permitted non-PM pollutant, capped 1.5; fades to 1 over 5 km; overridable per facility with `toxicity_weight` | Clairton 1.3, Edgar Thomson 1.2, Irvin 1.1 |
+| `W_wind` | Dispersion: `clamp(1.3 − 0.03 × wind km/h, 0.7, 1.3)`; stagnant air raises risk | from NWS |
+| `Odor_score` | Mean Smell PGH rating (1 to 5) of reports in the zone in the last 3 h, 0 if none | measured |
+| `W_odor` | PM-equivalent units per odor point | 4 |
+| `V_user` | 1 + 0.4 asthma + 0.4 COPD + 0.3 heart disease + 0.2 under 12 or 65+ + 0.2 recent high exposure, capped 2 | 1 |
+
+With every weight at 1 the index equals the corrected PM2.5, so the level
+edges are the EPA 2024 category edges:
+
+| Level | Index | Guidance |
+| --- | --- | --- |
+| Low (green) | below 9.1 | Safe for all. |
+| Elevated (yellow) | 9.1 to 35.4 | Safe for the general public; sensitive users prepare. |
+| High (orange) | 35.5 to 55.4 | Sensitive individuals shelter in place. |
+| Severe (red) | 55.5 to 125.4 | All users shelter in place. |
+| Toxic (purple) | 125.5 and above | Immediate alert, likely industrial upset event. |
+
+Weights live in `RISK_WEIGHTS` in both `risk.ts` files.
+
+### `smell_reports/{id}`
+
+Smell PGH reports inside the PurpleAir bounding box, synced by
+`onPollComplete` for the last 24 hours and kept 7 days by TTL. Public
+read. Coordinates are rounded to 3 decimals; only the rating, time, zip
+and the public smell description are stored.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `source` | string | `smellpgh`. |
+| `smell_value` | number | 1 (just fine) to 5 (as bad as it gets). |
+| `lat`, `lng` | number | Rounded location. |
+| `observed_at` | Timestamp | Report time. |
+| `description` | string or null | Reporter's smell description, at most 200 characters. |
+| `zipcode` | string or null | Reporter's zip. |
+| `synced_at`, `expires_at` | Timestamp | Sync time; TTL at `observed_at` + 7 days. |
+
+### `vcan_distributions/{siteId}`
+
+Where VCAN has distributed air filters or purifiers. Edited in the console.
+Public read.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `name` | string | Site name, for example a library or church. |
+| `lat`, `lng` | number | Location. |
+| `address`, `municipality` | string | Optional. |
+| `what` | string | What was distributed, for example "HEPA purifiers". |
+| `date` | string | Optional date or period. |
+| `notes` | string | Optional. |
 
 ### `config/facilities`
 

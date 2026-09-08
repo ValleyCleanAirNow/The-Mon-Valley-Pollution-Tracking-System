@@ -11,6 +11,7 @@ import { Channel, DeliveryResult, Providers, sendEmail, sendPush, sendSms } from
 import { composeAlert, composeImproving } from "./messages";
 import { MunicipalityStatusDoc, StatusHistoryEntry, updateMunicipalityStatuses } from "./status";
 import { updateFacilityStatuses } from "./facilities";
+import { syncSmellReports } from "./smellpgh";
 
 export interface SubscriptionDoc {
   municipalities: string[];
@@ -79,9 +80,10 @@ export async function evaluateAlerts(
   const statuses = precomputed ?? (await updateMunicipalityStatuses(db, now));
   summary.statuses = statuses.length;
   if (!precomputed) {
+    const smellReports = await syncSmellReports(db, now);
     try {
-      const facilities = await updateFacilityStatuses(db, now);
-      logger.info("Facility status updated", { facilities: facilities.length });
+      const facilities = await updateFacilityStatuses(db, now, { smellReports });
+      logger.info("Facility status updated", { facilities: facilities.length, smell_reports: smellReports.length });
     } catch (err) {
       logger.error("Facility status update failed", { error: err instanceof Error ? err.message : String(err) });
     }

@@ -40,7 +40,7 @@ describe('SensorMap', () => {
   it('renders heading, legend and last-updated stamp from provided sensors', () => {
     render(<SensorMap sensors={mockSensors} onSensorSelect={jest.fn()} />);
     expect(screen.getByText('Sensor Map')).toBeInTheDocument();
-    expect(screen.getByLabelText('AQI legend')).toBeInTheDocument();
+    expect(screen.getByLabelText('Map legend')).toBeInTheDocument();
     expect(screen.getByText(/Last updated:/)).toBeInTheDocument();
     expect(screen.getByText('1 of 2 sensors used in averages')).toBeInTheDocument();
   });
@@ -72,22 +72,39 @@ describe('SensorMap facilities', () => {
         pm25_corrected: 41, aqi: 115, aqi_category: 'Unhealthy for Sensitive Groups' as const, sensor_count: 2,
         wind: { from_deg: 270, speed_kmh: 20, observed_at: null, station: 'KAGC' }, zone_shape: 'sector' as const, zone_length_km: 4, zone_bearing_deg: 90,
         zone_polygon: [{ lat: 40.29, lng: -79.88 }, { lat: 40.31, lng: -79.84 }, { lat: 40.28, lng: -79.84 }, { lat: 40.29, lng: -79.88 }], computed_at: null,
+        risk_level: 'high' as const, risk_score: 45.2, risk_inputs: { pm_cal: 41, w_tox: 1.3, w_wind: 0.7, odor_score: 2, w_odor: 4, v_user: 1 }, smell_reports_in_zone: 1,
       },
     },
   };
-  it('draws a facility marker, its risk zone, and the legend entries', () => {
-    render(<SensorMap sensors={mockSensors} facilityData={facilityData} />);
-    expect(screen.getByTestId('facility')).toBeInTheDocument();
-    expect(screen.getByTestId('zone')).toBeInTheDocument();
-    expect(screen.getByText('Title V facility')).toBeInTheDocument();
-    expect(screen.getByText(/Risk zone: downwind of a plant/)).toBeInTheDocument();
-    expect(screen.getByText(/Nearby air: Unhealthy for Sensitive Groups/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Wind from the W at 20 km\/h/).length).toBeGreaterThan(0);
+  const smellData = [
+    { id: 's1', smell_value: 4, lat: 40.30, lng: -79.88, observed_at: new Date(), description: 'rotten eggs' },
+    { id: 's2', smell_value: 2, lat: 40.31, lng: -79.87, observed_at: new Date(), description: null },
+  ];
+  const distributionData = [{ id: 'd1', name: 'Clairton Library', lat: 40.29, lng: -79.88, what: 'HEPA purifiers', address: '616 Miller Ave' }];
+
+  it('draws facilities as hexagon risk zones, smell reports, distribution sites, and a sectioned legend', () => {
+    render(<SensorMap sensors={mockSensors} facilityData={facilityData} smellData={smellData} distributionData={distributionData} />);
+    expect(screen.getAllByTestId('facility').length).toBe(2); // factory + heart markers share the Marker mock
+    expect(screen.getAllByTestId('zone').length).toBeGreaterThan(3); // hex cells
+    expect(screen.getAllByText(/Risk High/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/toxicity 1.3 × wind 0.7/)).toBeInTheDocument();
+    expect(screen.getByText('Smell report: 4 of 5')).toBeInTheDocument();
+    expect(screen.getByText('Clairton Library')).toBeInTheDocument();
+    expect(screen.getByText('PurpleAir Sensors')).toBeInTheDocument();
+    expect(screen.getByText('Smell PGH Reports')).toBeInTheDocument();
+    expect(screen.getByText('Risk Zones')).toBeInTheDocument();
+    expect(screen.getByText('Title V Facilities')).toBeInTheDocument();
+    expect(screen.getByText('VCAN Distribution')).toBeInTheDocument();
+    expect(screen.getByText('Good (0-9)')).toBeInTheDocument();
     expect(screen.getByText(/Facilities right now/)).toBeInTheDocument();
   });
-  it('hides the layer when toggled off', async () => {
-    render(<SensorMap sensors={mockSensors} facilityData={facilityData} />);
-    await userEvent.setup().click(screen.getByLabelText('Show facilities and risk zones'));
+  it('hides layers when toggled off', async () => {
+    render(<SensorMap sensors={mockSensors} facilityData={facilityData} smellData={smellData} distributionData={distributionData} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText('Facilities and risk zones'));
     expect(screen.queryByTestId('zone')).not.toBeInTheDocument();
+    expect(screen.queryByText('Risk Zones')).not.toBeInTheDocument();
+    await user.click(screen.getByLabelText(/Smell PGH reports/));
+    expect(screen.queryByText('Smell report: 4 of 5')).not.toBeInTheDocument();
   });
 });

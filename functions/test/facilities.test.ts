@@ -115,5 +115,7 @@ describe('updateFacilityStatuses', () => {
     expect(clairton.aqi_category).toBe('Moderate');
     expect(clairton.zone_shape).toBe('circle');
     expect(clairton.wind).toBeNull();
+    expect(clairton.risk_level).toBe('elevated');
+    expect(clairton.risk_inputs.w_wind).toBe(1);
   });
 });

@@ -216,6 +216,17 @@ describe('alerts', () => {
     await assertFails(setDoc(doc(admin, 'facility_status/X'), { aqi: 1 }));
   });
 
+  test('smell reports and distribution sites are public read, never client writable', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'smell_reports/r1'), { smell_value: 3 });
+      await setDoc(doc(ctx.firestore(), 'vcan_distributions/d1'), { name: 'Library' });
+    });
+    const anon = env.unauthenticatedContext().firestore();
+    await assertSucceeds(getDoc(doc(anon, 'smell_reports/r1')));
+    await assertSucceeds(getDoc(doc(anon, 'vcan_distributions/d1')));
+    await assertFails(setDoc(doc(env.authenticatedContext('admin', { admin: true }).firestore(), 'vcan_distributions/d2'), { name: 'x' }));
+  });
+
   test('status and config are public read; log and state are locked down', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore();
