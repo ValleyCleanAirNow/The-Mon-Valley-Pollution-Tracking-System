@@ -1,4 +1,5 @@
 import type { AqiCategory } from '../lib/aqi';
+import type { RiskInputs, RiskLevel } from '../lib/risk';
 
 /** Document in `titleVFacilities` (public read). */
 export interface Facility {
@@ -20,8 +21,6 @@ export interface Facility {
 }
 
 export type { RiskLevel } from '../lib/risk';
-import type { RiskLevel } from '../lib/risk';
-import type { RiskInputs } from '../lib/risk';
 
 /** Document in `facility_status/{facilityId}`, computed hourly by onPollComplete. */
 export interface FacilityStatus {
