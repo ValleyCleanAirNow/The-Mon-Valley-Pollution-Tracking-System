@@ -5,7 +5,11 @@ import './SensorMap.css';
 import { useSensors } from '../hooks/useSensors';
 import { colorFor, NO_DATA_COLOR, textColorFor } from '../lib/aqi';
 import MapLegend from './MapLegend';
-import { DistributionLayer, FacilityLayer, SmellLayer } from './OverlayLayers';
+import { CommunityLayer, DistributionLayer, FacilityLayer, SmellLayer } from './OverlayLayers';
+import { useAggregates } from '../hooks/useAggregates';
+import { useMunicipalityStatus } from '../hooks/useMunicipalityStatus';
+import { bubblesFromAggregates } from '../lib/communityReports';
+import type { Aggregate } from '../types/report';
 import { useFacilities } from '../hooks/useFacilities';
 import { useDistributions, useSmellReports } from '../hooks/useMapLayers';
 import { describeZone, type Facility, type FacilityStatus } from '../types/facility';
@@ -21,6 +25,8 @@ interface SensorMapProps {
   facilityData?: { facilities: Facility[]; statuses: Record<string, FacilityStatus> };
   smellData?: SmellReport[];
   distributionData?: DistributionSite[];
+  aggregateData?: Aggregate[];
+  centroidData?: Record<string, { lat: number; lng: number }>;
   onSensorSelect?: (sensor: Sensor) => void;
 }
 
@@ -83,7 +89,7 @@ const SensorPopup: React.FC<{ sensor: Sensor }> = ({ sensor }) => {
   );
 };
 
-const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, facilityData, smellData, distributionData, onSensorSelect }) => {
+const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, facilityData, smellData, distributionData, aggregateData, centroidData, onSensorSelect }) => {
   const { sensors, loading, error, lastUpdated } = useSensors(propSensors);
   const { facilities, statuses } = useFacilities(facilityData);
   const smellReports = useSmellReports(smellData);
@@ -92,6 +98,17 @@ const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, facilityDat
   const [showFacilities, setShowFacilities] = useState(true);
   const [showSmell, setShowSmell] = useState(true);
   const [showDistribution, setShowDistribution] = useState(true);
+  const [showCommunity, setShowCommunity] = useState(true);
+  const since = useMemo(() => new Date(Date.now() - 24 * 60 * 60 * 1000), []);
+  const { aggregates: liveAggregates } = useAggregates(aggregateData ? new Date(0) : since);
+  const { statuses: municipalityStatuses } = useMunicipalityStatus();
+  const bubbles = useMemo(() => bubblesFromAggregates(aggregateData ?? liveAggregates), [aggregateData, liveAggregates]);
+  const centroids = useMemo(() => {
+    if (centroidData) return centroidData;
+    const out: Record<string, { lat: number; lng: number }> = {};
+    for (const [m, st] of Object.entries(municipalityStatuses)) if (st.centroid) out[m] = st.centroid;
+    return out;
+  }, [centroidData, municipalityStatuses]);
 
   const isStale = useMemo(() => {
     if (!lastUpdated) return false;
@@ -128,6 +145,10 @@ const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, facilityDat
           </label>
         )}
         <label className="sensor-map__toggle">
+          <input type="checkbox" checked={showCommunity} onChange={(e) => setShowCommunity(e.target.checked)} />
+          Community reports ({bubbles.reduce((n, b) => n + b.report_count, 0)})
+        </label>
+        <label className="sensor-map__toggle">
           <input type="checkbox" checked={showSmell} onChange={(e) => setShowSmell(e.target.checked)} />
           Smell PGH reports ({smellReports.length})
         </label>
@@ -140,6 +161,7 @@ const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, facilityDat
       </div>
       <MapLegend
         sections={{
+          community: showCommunity,
           smell: showSmell,
           zones: showFacilities && facilities.length > 0,
           facilities: showFacilities && facilities.length > 0,
@@ -153,6 +175,7 @@ const SensorMap: React.FC<SensorMapProps> = ({ sensors: propSensors, facilityDat
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {showFacilities && <FacilityLayer facilities={facilities} statuses={statuses} />}
+        {showCommunity && <CommunityLayer bubbles={bubbles} centroids={centroids} />}
         {showSmell && <SmellLayer reports={smellReports} />}
         {showDistribution && <DistributionLayer sites={distributions} />}
         {sensors.map((sensor) => {

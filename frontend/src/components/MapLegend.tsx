@@ -4,6 +4,7 @@ import { RISK_LEVEL_STYLE, SMELL_BUCKETS } from '../lib/mapLayers';
 import './SensorMap.css';
 
 export interface LegendSections {
+  community?: boolean;
   smell?: boolean;
   zones?: boolean;
   facilities?: boolean;
@@ -34,6 +35,16 @@ const MapLegend: React.FC<{ sections?: LegendSections }> = ({ sections = {} }) =
         </ul>
         <p className="legend-note">Community-operated sensors providing hourly PM2.5 readings, EPA-corrected, in µg/m³ (EPA 2024 ranges).</p>
       </section>
+
+      {sections.community && (
+        <section>
+          <h4>Community Reports</h4>
+          <ul className="aqi-legend">
+            <li><span className="aqi-legend__swatch" style={{ background: 'rgba(25,118,210,0.3)', borderColor: '#1976d2', width: 18, height: 18 }} aria-hidden="true" />Reports filed through this app, last 24 hours; bubble size is the count</li>
+          </ul>
+          <p className="legend-note">Shown per municipality only when 3 or more people reported in the same hour. Individual reports are never plotted.</p>
+        </section>
+      )}
 
       {sections.smell && (
         <section>
