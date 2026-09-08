@@ -17,6 +17,8 @@ jest.mock('react-leaflet', () => ({
 }));
 
 jest.mock('../firebase', () => ({ db: {}, auth: {} }));
+jest.mock('../hooks/useAggregates', () => ({ useAggregates: () => ({ aggregates: [], error: null }) }));
+jest.mock('../hooks/useMunicipalityStatus', () => ({ useMunicipalityStatus: () => ({ statuses: {}, error: null }) }));
 
 const base: Omit<Sensor, 'id' | 'name' | 'pm25_corrected' | 'aqi' | 'aqi_category' | 'excluded' | 'exclude_reason'> = {
   source: 'purpleair',
@@ -106,5 +108,20 @@ describe('SensorMap facilities', () => {
     expect(screen.queryByText('Risk Zones')).not.toBeInTheDocument();
     await user.click(screen.getByLabelText(/Smell PGH reports/));
     expect(screen.queryByText('Smell report: 4 of 5')).not.toBeInTheDocument();
+  });
+});
+
+describe('SensorMap community reports', () => {
+  it('plots aggregated reports as a bubble at the municipality centre, never individual reports', () => {
+    const aggregateData = [{
+      id: 'Clairton_2026-09-08T10', municipality: 'Clairton', hour_bucket: '2026-09-08T10', hour_start: new Date(), report_count: 4, odor_present_count: 3,
+      top_symptoms: [{ value: 'headache', count: 3 }], top_odors: [{ value: 'rotten_eggs_sulfur', count: 3 }], top_actions: [], top_causes: [], mean_symptom_severity: 2, mean_odor_intensity: 3,
+    }];
+    render(<SensorMap sensors={mockSensors} aggregateData={aggregateData} centroidData={{ Clairton: { lat: 40.2923, lng: -79.8817 } }} />);
+    expect(screen.getByText('Clairton: 4 community reports')).toBeInTheDocument();
+    expect(screen.getByText(/Symptoms: Headache \(3\)/)).toBeInTheDocument();
+    expect(screen.getByText('Community Reports')).toBeInTheDocument();
+    expect(screen.getByText(/Individual reports are never plotted/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Community reports \(4\)/)).toBeInTheDocument();
   });
 });

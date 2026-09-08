@@ -6,6 +6,8 @@ import { hexCellsInPolygon } from '../lib/hexgrid';
 import { HEX_RADIUS_KM, RISK_LEVEL_STYLE, smellColor } from '../lib/mapLayers';
 import { describeZone, type Facility, type FacilityStatus } from '../types/facility';
 import type { DistributionSite, SmellReport } from '../types/layers';
+import { bubbleRadius, type CommunityBubble } from '../lib/communityReports';
+import { labelFor, ODOR_TYPES, SYMPTOMS } from '../types/report';
 
 const factoryIcon = L.divIcon({ className: 'facility-icon', html: '<span aria-hidden="true">🏭</span>', iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -14] });
 const heartIcon = L.divIcon({ className: 'facility-icon', html: '<span aria-hidden="true">❤️</span>', iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -14] });
@@ -122,5 +124,31 @@ export const DistributionLayer: React.FC<{ sites: DistributionSite[] }> = ({ sit
         </Popup>
       </Marker>
     ))}
+  </>
+);
+
+export const COMMUNITY_COLOR = '#1976d2';
+
+/** Hourly community-report aggregates as bubbles at municipality centres. */
+export const CommunityLayer: React.FC<{ bubbles: CommunityBubble[]; centroids: Record<string, { lat: number; lng: number }> }> = ({ bubbles, centroids }) => (
+  <>
+    {bubbles.map((b) => {
+      const c = centroids[b.municipality];
+      if (!c) return null;
+      return (
+        <CircleMarker key={b.municipality} center={[c.lat, c.lng]} radius={bubbleRadius(b.report_count)} pathOptions={{ color: COMMUNITY_COLOR, weight: 2, fillColor: COMMUNITY_COLOR, fillOpacity: 0.3 }}>
+          <Popup>
+            <div className="sensor-popup">
+              <strong>{b.municipality}: {b.report_count} community report{b.report_count === 1 ? '' : 's'}</strong>
+              <div className="facility-popup__muted">Last 24 hours, hourly totals of 3 or more only</div>
+              {b.top_symptoms.length > 0 && <div>Symptoms: {b.top_symptoms.map((t) => `${labelFor(SYMPTOMS, t.value)} (${t.count})`).join(', ')}</div>}
+              {b.top_odors.length > 0 && <div>Odors: {b.top_odors.map((t) => `${labelFor(ODOR_TYPES, t.value)} (${t.count})`).join(', ')}</div>}
+              {b.odor_present_count > 0 && <div className="facility-popup__muted">{b.odor_present_count} noticed a smell</div>}
+              {b.latest_hour && <div className="facility-popup__muted">Latest hour: {fmtTime(b.latest_hour)}</div>}
+            </div>
+          </Popup>
+        </CircleMarker>
+      );
+    })}
   </>
 );
